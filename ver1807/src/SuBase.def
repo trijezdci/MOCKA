@@ -1,0 +1,134 @@
+(*!m2pim+mocka*)
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+DEFINITION MODULE SuBase;
+
+FROM ByteIO IMPORT
+  File;
+
+FROM Strings IMPORT
+  String;
+
+
+CONST
+  MaxOptions  = 31;
+  MaxVariants = 10;
+
+
+TYPE
+  Mode = ( CompileDefMode, CompileImpMode, BindMode, InteractiveMode );
+  
+  FileKind =
+    ( KindSourceFile, KindObjectFile, KindErrorFile, KindCodeFile,
+      KindRelocFile, KindDefFile, KindDebugFile, KindMapFile,
+      KindDepFile, KindAssemblerSourceFile );
+      (* Note: Transputer executable files have suffix "exe". Use
+         procedure BuildLibraryFileName to compose .exe filenames. *)
+  
+  FileName = ARRAY [0..255] OF CHAR;
+  
+  CompUnitClass =
+    ( DefinitionModuleClass, ImplementationModuleClass, ProgramModuleClass,
+      ForeignModuleClass, ErrorModuleClass );
+  
+  TimeStampType = LONGINT;
+  
+  OptionSet = SET OF [0..MaxOptions];
+  
+  
+VAR
+  NameOfSourceFile : FileName;
+  ThisCompUnitClass : CompUnitClass;
+  TimeStampNull : TimeStampType;
+  CurrentTimeStamp : TimeStampType;
+  GlobalOptions : OptionSet;
+  CurOptions : OptionSet;
+  IndexCheckOption, SubrangeCheckOption : CARDINAL;
+  DebugOption : CARDINAL;  (* he 2/90 *)
+  ModeSpec : Mode;
+  NameOfModule : String;
+  LibraryDirectory : String;  (* he 2/90 *)
+  Libraries : POINTER TO ARRAY [0..65000] OF CHAR; (* ms 5/90 *)
+  BindScript : String;
+  EditScript : String;
+  ListerScript : String;
+  AssemblerScript : String;
+  
+
+PROCEDURE SystemCommand ( VAR command : ARRAY OF CHAR; VAR success : BOOLEAN );
+(* Fork a shell executing 'command'. Status passed back in success. *)
+  
+
+PROCEDURE Blip;
+(* Called whenever a block is compiled (by pass one or two).
+   Updates the procedure counter that is shown on the screen.  *)
+   
+
+PROCEDURE InitBlip ( text : ARRAY OF CHAR );
+(* Initialize procedure Blip. 'text' is a string preceding the counter. *)
+
+
+PROCEDURE OpenLibraryFile
+  ( VAR moduleName : ARRAY OF CHAR;
+	kind       : FileKind;
+    VAR file       : File;
+    VAR path       : ARRAY OF CHAR;
+    VAR success    : BOOLEAN );
+(* Open the file 'file' for input.
+   The name is constructed from 'moduleName' and the suffix corresponding
+   to 'kind'. The directories as defined by 'DefineLibraries' are
+   inspected. On exit 'path' contains the path which has to be added
+   to the file name in order to open the file.
+   'success' is TRUE if the file has been opened successfully. *)
+
+
+PROCEDURE BuildFileName ( kind : FileKind; VAR name : FileName );
+(* Construct the name of a file according to file kind 'kind'.
+   This procedure is used for the source file and the temporary files
+   error, reloc and code file. On exit 'name' contains the name.  *)
+
+
+PROCEDURE BuildLibraryFileName
+  ( VAR moduleName : ARRAY OF CHAR; kind : FileKind; VAR name : FileName );
+(* Construct the name of a library file according to module name 'ModuleName'
+   and file kind 'kind'. On exit 'name' contains the name. *)
+
+
+PROCEDURE InitSuBase;
+(* Initialize.  *)
+
+
+PROCEDURE DefineOption
+  ( VAR option: CARDINAL; id: ARRAY OF CHAR; init : BOOLEAN; public : BOOLEAN ); 
+(* he 2/90 *)
+PROCEDURE SetOption ( id : ARRAY OF CHAR; VAR success : BOOLEAN );
+
+
+PROCEDURE Enabled ( option : CARDINAL ) : BOOLEAN;
+
+
+PROCEDURE ShowOptions;
+(* Show compiler options *)
+
+
+(* TO DO: Rename this procedure *)
+PROCEDURE ShowPublicOptions;
+(* show options and settings *)
+
+
+PROCEDURE DefineVariant ( str : ARRAY OF CHAR );
+
+(*TO DO: Change function identifier to camelCase *)
+PROCEDURE DefinedVariant ( str : ARRAY OF CHAR ) : BOOLEAN;
+
+
+END SuBase.

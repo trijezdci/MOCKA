@@ -1,0 +1,298 @@
+(******************************************************************************)
+(*                                                                            *)
+(*  GMD Modula-2 System                                                       *)
+(*                                                                            *)
+(*  Copyright (C) 1993 by GMD                                                 *)
+(*                                                                            *)
+(*  Gesellschaft fuer Mathematik und Datenverarbeitung GmbH                   *)
+(*  Forschungsstelle an der Universitaet Karlsruhe                            *)
+(*  Vincenz-Priessnitz-Str. 1,  D-76131 Karlsruhe                             *)
+(*                                                                            *)
+(******************************************************************************)
+(*                                                                            *)
+(*     INTEL 80386/387                                                        *)
+(*                                                                            *)
+(******************************************************************************)
+ 
+ 
+DEFINITION MODULE CgTypeMap;
+
+FROM SuErrors IMPORT
+   SourcePosition;
+
+CONST
+   MinChar                    =  0;
+   MaxChar                    =  255;
+   MaxShortCard               =  65535;
+   MaxShortInt                =  32767;
+   MinShortInt                = -32768;
+   MaxLongInt                 =  2147483647;
+   MinLongInt                 = -2147483648;
+   AbsMinLongInt              =  2147483648;
+   MaxBitset                  =  31;
+   MaxSet                     =  MaxBitset;
+   AbsMinShortInt             =  32768;
+   MaxLongCard                =  0FFFFFFFFH;
+
+   AlignByte                  = 1;
+   AlignWord                  = 2;
+   AlignLong                  = 4;
+   AlignDouble                = 8;
+
+   ByteSize                   = 1;
+   WordSize                   = 2 * ByteSize;
+   ThreeByteSize              = 3 * ByteSize;
+   LongSize                   = 2 * WordSize;
+   DoubleSize                 = 2 * LongSize;
+   StringParamSize            = 2 * LongSize;
+
+   ReservedParamFrameSize     = 8; (* Return-Adresse und alter Basepointer *)
+   ReservedProcFrameSize      = 4; (* alter DisplayVector[CurLevel]        *)
+   ReservedModuleFrameSize    = 0;
+   
+   MaxAlignment               = AlignLong;
+   StackAlignment             = AlignLong;
+
+   SizeCHAR                   = ByteSize;
+   AlignCHAR                  = AlignByte;
+   SizeBOOLEAN                = ByteSize;
+   AlignBOOLEAN               = AlignByte;
+   SizeBITSET                 = LongSize;
+   AlignBITSET                = AlignLong;
+   SizeSHORTCARD              = WordSize;
+   AlignSHORTCARD             = AlignWord;
+   SizeLONGCARD               = LongSize;
+   AlignLONGCARD              = AlignLong;
+   SizeSHORTINT               = WordSize;
+   AlignSHORTINT              = AlignWord;
+   SizeLONGINT                = LongSize;
+   AlignLONGINT               = AlignLong;
+   SizeREAL                   = LongSize;
+   AlignREAL                  = AlignLong;
+   SizeLONGREAL               = DoubleSize;
+   AlignLONGREAL              = AlignDouble;
+   SizeADDRESS                = LongSize;
+   AlignADDRESS               = AlignLong;
+   SizeWORD                   = ByteSize;
+   AlignWORD                  = AlignByte;
+   SizePROC                   = SizeADDRESS; 
+   AlignPROC                  = AlignADDRESS; 
+   SizeNIL                    = SizeADDRESS;
+   AlignNIL                   = AlignADDRESS;
+   SizeOPAQUE                 = SizeADDRESS;
+   AlignOPAQUE                = AlignADDRESS;
+   SizeSTRING                 = 0;
+   AlignSTRING                = 0;
+   SizeVOID                   = 0;
+   AlignVOID                  = 0;
+   SizeERROR                  = 0;
+   AlignERROR                 = 1;	(* *** CvR 91/02/20 *** *)
+
+   (* 'ambiguous' types *)
+   SizeSIorLI                 = WordSize;  (* min(SI) ..       0 *)
+   AlignSIorLI                = AlignLong; (* min(SI) ..       0 *)
+   SizeSIorSCorLIorLC         = WordSize;  (*       0 .. max(SI) *)
+   AlignSIorSCorLIorLC        = AlignLong; (*       0 .. max(SI) *)
+   SizeSCorLIorLC             = WordSize;  (* max(SI) .. max(SC) *)
+   AlignSCorLIorLC            = AlignLong; (* max(SI) .. max(SC) *)
+   SizeLIorLC                 = LongSize;  (* max(SC) .. max(LI) *)
+   AlignLIorLC                = AlignLong; (* max(SC) .. max(LI) *)
+   SizeSRorLR                 = LongSize;
+   AlignSRorLR                = AlignDouble;
+
+   PointerSize                = LongSize;
+   PointerAlign               = AlignADDRESS;
+   ProcTypeSize               = LongSize;
+   ProcTypeAlign              = AlignADDRESS;
+   OpenArraySize              = 2 * LongSize;
+   OpenArrayAlign             = AlignADDRESS;
+
+   CprocNumber                = 0;
+   CompUnitProcNumber         = 1;
+   UndefinedProcNumber        = MaxShortInt;
+
+   TransferParamSize          = 2 * LongSize;
+   TransferParam1Offset       = ReservedParamFrameSize;
+   TransferParam2Offset       = TransferParam1Offset + LongSize;
+
+   NewProcessParamSize        = 4 * LongSize;
+   NewProcessParam1Offset     = ReservedParamFrameSize;
+   NewProcessParam2Offset     = NewProcessParam1Offset + LongSize;
+   NewProcessParam3Offset     = NewProcessParam2Offset + LongSize;
+   NewProcessParam4Offset     = NewProcessParam3Offset + LongSize;
+
+(* +++ CvR 91/02/18 +++ *)
+(*  This code doesn't take care of aligned stacks !!!
+ *
+ *  (* ++ jv ++ *)
+ *  StandardProcNEWparamSize        = SizeADDRESS + LongSize;
+ *  StandardProcDISPOSEparamSize    = SizeADDRESS + LongSize; 
+ *                               (* two parameters, 1. address of storage area,*)
+ *                               (* 2. size of area.                           *)
+ *  (* -- jv -- *)
+ *)
+
+(* The actual parameters are of type ADDRESS and LONGCARD.
+ * They are 'pushed' in reverse order, so the ADDRESS-parameter will
+ * be aligned to StackAlignment. This alignment implies LONGCARD
+ * using StackAlignment space.
+ * 
+ * The code below is incorrect iff LongSize > StackAlignment.
+ *)
+   StandardProcNEWparamSize	= SizeADDRESS + StackAlignment; 
+   StandardProcDISPOSEparamSize	= SizeADDRESS + StackAlignment; 
+
+(* --- CvR 91/02/18 --- *)
+
+VAR
+   MaxReal,
+   MinReal      : REAL;
+   MinLongReal,
+   MaxLongReal  : LONGREAL;
+
+
+PROCEDURE InitTypeMap;
+
+(* Initialize. *)
+
+
+PROCEDURE GenProcNumber
+   () : SHORTCARD;
+
+(* Generate a fresh procedure number.  *)
+
+
+PROCEDURE InitBlockAlign
+   (    InitialActivationRecordSize     : LONGINT;
+    VAR EnclosingActivationRecordOffset : LONGINT);
+
+(* Initialize alignment when entering a block.  *)
+
+
+PROCEDURE FinishBlockAlign
+   (    EnclosingActivationRecordOffset : LONGINT;
+    VAR ActivationRecordSize            : LONGINT);
+
+(* Returns size of activation record when leaving a block.  *)
+
+PROCEDURE InitModuleFrameSize
+   (InitialModuleFrameSize : LONGINT);
+
+(* Initializes static frame of current module. *)
+
+
+PROCEDURE GetModuleFrameSize
+   (VAR ModuleFrameSize : LONGINT);
+
+(* Returns static frame size of current module. *)
+
+
+PROCEDURE Add
+   (    pos : SourcePosition;
+        op1 : LONGINT;
+    VAR op2 : LONGINT); 
+
+(* Perform the operation 'op2 := op1 + op2', check for overflow *)
+
+
+PROCEDURE AlignVariable
+   (    pos         : SourcePosition;
+        VarSize     : LONGINT;
+	VarAlign    : SHORTCARD; (* HE 04/90 *) 
+        VarIsGlobal : BOOLEAN;
+    VAR VarOffset   : LONGINT);
+
+(* Align variable.
+ * On exit 'VarOffset' contains the offset of the variable
+ * described by 'VarSize' and 'VarIsGlobal'. *)
+
+
+PROCEDURE AlignRecordField
+   (    pos          :             SourcePosition;
+        RecFieldSize :             LONGINT; 
+	RecFieldAlign:             SHORTCARD; (* HE 04/90 *) 
+    VAR size         : (* inout *) LONGINT; 
+    VAR align        : (* inout *) SHORTCARD; (* HE 04/90 *) 
+    VAR RecOffset    : (* inout *) LONGINT;
+    VAR FieldOffset  : (*   out *) LONGINT);
+
+(* Align record field.
+ * 'RecOffset' denotes the next free field offset, 'size' the current 
+ * calculated size of the record or variant part. On exit 'FieldOffset'
+ * contains the offset of the record field described by 'RecFieldSize'.  *)
+
+
+PROCEDURE AlignParam
+   (    pos           : SourcePosition;
+        IsValueParam  : BOOLEAN;
+        IsOpenArray   : BOOLEAN;
+        ParamSize     : LONGINT;
+	ParamAlign    : SHORTCARD; (* HE 04/90 *) 
+    VAR ParamOffset   : LONGINT);
+
+(* Align formal parameter.  *)
+
+
+PROCEDURE GetOpenArrayBounds
+   (    ElemSize : LONGINT;
+	ElemAlign: SHORTCARD;
+    VAR lwb      : LONGINT;
+    VAR upb      : LONGINT);
+
+(* Returns lwb and upb of open array *)
+
+
+PROCEDURE HighFieldOffset
+   (base : LONGINT) : LONGINT;
+
+(* Returns offset of high field of the open array whose descriptor
+ * has offset 'base'.  *)
+
+
+PROCEDURE GetParamSize 
+   () : LONGINT;
+
+(* Returns storage size occupied by parameters
+ * to be called after all parameters are evaluated. *)
+
+
+PROCEDURE GetArraySize
+   (pos         : SourcePosition;
+    IndexLength : LONGCARD;
+    CompSize    : LONGINT;
+    CompAlign   : SHORTCARD) : LONGINT;
+
+(* Calculate size of array type.  *)
+
+
+PROCEDURE AdjustedArrayElemSize
+   (ElemSize : LONGINT;
+    ElemAlign: SHORTCARD
+   )         : LONGINT;
+
+(* Aligns ElemSize to word boundary, if not equal byte size.  *)
+
+
+(* +++ CvR 91/01/24 +++ *)
+PROCEDURE GetArrayAlign
+   (ElemSize : LONGINT;
+    ElemAlign: SHORTCARD;
+    ArraySize: LONGINT
+   )         : SHORTCARD;
+
+(* Calculate the alignment of array type. *)
+(* --- CvR 91/01/24 --- *)
+
+
+PROCEDURE GetEnumSize
+   (MaxVal : LONGINT; VAR Size : LONGINT; VAR Align : SHORTCARD); (* HE 04/90 *) 
+
+(* Calculate size of enumeration type, MaxVal denotes last literal.  *)
+
+
+PROCEDURE GetSetSize
+   (SetSize : LONGINT; VAR Size : LONGINT; VAR Align : SHORTCARD); (* HE 04/90 *) 
+
+(* Calculate size of set type.  *)
+
+END CgTypeMap.

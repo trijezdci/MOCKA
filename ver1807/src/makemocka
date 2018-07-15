@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# Christian Maurer   v. 5. August 2012
+
+export MOCKAM2=
+export MOCKALINK=
+
+echo p Mocka | mocka

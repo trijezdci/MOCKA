@@ -1,0 +1,164 @@
+(* 5.May.1989:   - jv - installed V8905                                       *)
+(* 5.Apr.1989:   - jv - installed new version: mocka/8904                     *)
+(* 88/05/19 - jv  - Reference Version 8805 established.                       *)
+(* 88/02/19 - jv  - vax VMS                                                   *)
+(* 88/01/29 - jv  - Reference Version 8801 established.                       *)
+ 
+ 
+(******************************************************************************)
+(*                                                                            *)
+(*  GMD Modula-2 System                                                       *)
+(*                                                                            *)
+(*  Copyright (C) 1988 by GMD                                                 *)
+(*                                                                            *)
+(*  Gesellschaft fuer Mathematik und Datenverarbeitung GmbH                   *)
+(*  Forschungsstelle an der Universitaet Karlsruhe                            *)
+(*  Vincenz-Priessnitz-Str. 1,  D-76131 Karlsruhe                             *)
+(*                                                                            *)
+(******************************************************************************)
+
+(******************************************************************************)
+(*                                                                            *)
+(* Definition:       C g U t i l i t i e s                                    *)
+(*                                                                            *)
+(* Project:          Codegenerator for Modula-2 and VAX 750                   *)
+(* Description:      Some utilities for the codegenerator.                    *)
+(*                                                                            *)
+(* Documentation:                                                             *)
+(*                                                                            *)
+(* File:             $MOCKADIR/src/vax/CgUtilities.md                         *)
+(* Created:          We. 15 April 87                                          *)
+(* Last changed:     Fr. 13 May   88                                          *)
+(* Author:           Juergen Vollmer                                          *)
+(*                                                                            *)
+(******************************************************************************)
+
+
+DEFINITION MODULE CgUtilities;
+
+TYPE String = ARRAY [0 .. 255] OF CHAR;
+
+(******************************************************************************)
+(*               procedures for strings                                       *)
+(******************************************************************************)
+
+(******************************************************************************)
+(* A string is used to manipulate arrays of characters.                       *)
+(* A string is terminated by charcater 0C, this means all characters before   *)
+(* the 0C are significant and all characters after have no meaning.           *)
+(* Value parameters of type ARRAY OF CHAR are automatically terminated with 0C*)
+(*                                                                            *)
+(* This procedures do not check string length for concatenation.              *)
+(* A runtime error will occur, if a result will be too long.                  *)
+(*                                                                            *)
+(* The in and out string parameter are not allowed to be aliases of the same  *)
+(* string object, the result will be unpredictable!                           *)
+(*                                                                            *)
+(******************************************************************************)
+
+PROCEDURE EmptyString (VAR Dest : ARRAY OF CHAR); 
+(******************************************************************************)
+(* Dest := ""; The empty string. StringLength (Dest) = 0.                     *)
+(******************************************************************************)
+
+PROCEDURE StringEqual (VAR Src1, Src2 : ARRAY OF CHAR) : BOOLEAN;
+(******************************************************************************)
+(* IF Src1 = Src2 THEN returns TRUE ELSE FALSE.                               *)
+(******************************************************************************)
+
+PROCEDURE StringAssign (VAR Dest : ARRAY OF CHAR; 
+		        VAR Src  : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Src;                                                               *)
+(******************************************************************************)
+
+PROCEDURE StringAppend1 (VAR Dest   : ARRAY OF CHAR; 
+		         VAR Suffix : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Dest & Suffix;                                                     *)
+(******************************************************************************)
+
+PROCEDURE StringAppend2 (VAR Dest    : ARRAY OF CHAR; 
+		         VAR Suffix1 : ARRAY OF CHAR;
+		         VAR Suffix2 : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Dest & Suffix1 & Suffix2;                                          *)
+(******************************************************************************)
+
+PROCEDURE StringAppend3 (VAR Dest    : ARRAY OF CHAR; 
+		         VAR Suffix1 : ARRAY OF CHAR;
+		         VAR Suffix2 : ARRAY OF CHAR;
+		         VAR Suffix3 : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Dest & Suffix1 & Suffix2 & Suffix3                                 *)
+(******************************************************************************)
+
+PROCEDURE StringConcat2 (VAR Dest   : ARRAY OF CHAR; 
+		         VAR Prefix : ARRAY OF CHAR;
+		         VAR Suffix : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Prefix & Suffix;                                                   *)
+(******************************************************************************)
+
+PROCEDURE StringConcat3 (VAR Dest    : ARRAY OF CHAR; 
+		         VAR Prefix  : ARRAY OF CHAR;
+		         VAR Suffix1 : ARRAY OF CHAR;
+		         VAR Suffix2 : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Prefix & Suffix1 & Suffix2;                                        *)
+(******************************************************************************)
+
+PROCEDURE StringPrecede (VAR Dest : ARRAY OF CHAR;
+                         VAR Src  : ARRAY OF CHAR);
+(******************************************************************************)
+(* Dest := Src & Dest;                                                        *)
+(******************************************************************************)
+
+PROCEDURE StringLength (VAR Str : ARRAY OF CHAR) : SHORTCARD;
+(******************************************************************************)
+(* Returns the number of significant charcters contained in the string.       *)
+(* The empty string has length 0.                                             *)
+(******************************************************************************)
+
+PROCEDURE StringTruncate (VAR Str : ARRAY OF CHAR;
+                              len : SHORTCARD);
+(******************************************************************************)
+(* If StringLength (Str) > len                                                *)
+(* then the string is truncated to len characters. (i.e. Str [len] := 0C)     *)
+(* else nothing is done.                                                      *)
+(******************************************************************************)
+
+PROCEDURE ConvertLONGCARDtoString (    Val : LONGCARD; 
+                                   VAR Str : ARRAY OF CHAR);
+(******************************************************************************)
+(* The cardinal value is converted to a string without leading zeros.         *)
+(******************************************************************************)
+
+PROCEDURE ConvertLONGINTtoString (    Val : LONGINT;
+                                  VAR Str : ARRAY OF CHAR);
+(******************************************************************************)
+(* The long integer value is converted to a string without leading zeros.     *)
+(* The sign is '-' or nothing. There is no space between the sign and the     *)
+(* first digit.                                                               *)
+(******************************************************************************)
+
+PROCEDURE ConvertREALtoString (    Val : LONGREAL; 
+			       VAR Str : ARRAY OF CHAR);
+(******************************************************************************)
+(* Convert real 'Val' to external representation.                             *)
+(* If the string length of str is too less, the resulting string is truncated.*)
+(******************************************************************************)
+
+PROCEDURE IsPowerOfTwo (val : CARDINAL) : BOOLEAN;
+(******************************************************************************)
+(* If val is a power of two then returns TRUE else returns FALSE.             *)
+(******************************************************************************)
+
+PROCEDURE Log2 (val : CARDINAL) : CARDINAL;
+(******************************************************************************)
+(* If val is a power of two then returns log2 (val) else an error message is  *)
+(* written and the program is halted.                                         *)
+(******************************************************************************)
+
+END CgUtilities.
+

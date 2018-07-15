@@ -1,0 +1,3981 @@
+%test
+%noIRConsCheck
+%noonthefly
+%LongCost
+
+CODE_GENERATOR_DESCRIPTION  CgMobil;
+(***************************************************************************)
+(*    INTEL 80386/387	Code Generator Spezifikation fuer BEG		   *) 
+(*                                                                         *)
+(*			Studienarbeit					   *)
+(*			Holger Hopp					   *)
+(*									   *)
+(*			Beginn : 27.05.93				   *)
+(*			Stand  : 17.10.96				   *)
+(*									   *)
+(*	COPYRIGHT (C) BY		GMD Forschungsstelle		   *)
+(*					an der Universitaet Karlsruhe	   *)
+(*					Vincenz-Priessnitz-Str. 3	   *)
+(*					76131 Karlsruhe			   *)
+(***************************************************************************)
+
+
+
+(***************************************************************************)
+(*                                                                         *)
+(*           Code Generator Beschreibung MOBIL -> INTEL 80386/387          *)
+(*                                                                         *)
+(***************************************************************************)
+
+
+INTERMEDIATE_REPRESENTATION
+(*************************)
+
+NONTERMINALS
+  Address, Data, FloatExp, Arglist;
+
+OPERATORS
+(* Die Semantik der einzelnen Operatoren der Zwischensprache ist im	*)
+(* Handbuch "Mobil : An Intermediate Language for Portable Optimizing	*)
+(* Compilers" beschrieben.						*)
+
+(* Konstanten ----------------------------------------------------------- *)
+  ShortCardConstant	( c	: SHORTCARD)			-> Data;
+  LongCardConstant	( c	: LONGCARD )			-> Data;
+  ShortIntConstant	( c	: SHORTINT )			-> Data;
+  LongIntConstant	( c	: LONGINT  )			-> Data;
+  RealConstant		( c	: REAL     )			-> Data;
+  LongRealConstant	( c	: LONGREAL )			-> Data;
+  CharConstant		( c	: CHAR     )			-> Data;
+  BoolConstant		( val	: BOOLEAN  )			-> Data;
+  SetConstant		( c	: BITSET   )			-> Data;
+  NilConstant							-> Data;
+  ProcedureConstant	(index	: CgBase.ProcIndex  )		-> Data;
+  StringAddr		(index	: CgBase.StringIndex)		-> Address;
+
+(* Adressberechnungen --------------------------------------------------- *)
+  LocalVariable	   (offset   : LONGINT)				-> Address;
+  GlobalVariable   (offset   : LONGINT)		Address		-> Address;
+  StaticVariable   (module   : CgBase.ModuleIndex;
+     		    offset   : LONGINT)				-> Address;
+  LocalValueParam  (offset   : LONGINT)				-> Address;
+  LocalVarParam    (offset   : LONGINT)				-> Address;
+  LocalOpenArrayValueParam
+		   (offset   : LONGINT)				-> Address;
+  GlobalValueParam (offset   : LONGINT)		Address		-> Address;
+  GlobalVarParam   (offset   : LONGINT)		Address		-> Address;
+  GlobalOpenArrayValueParam
+		   (offset   : LONGINT)		Address		-> Address;
+  UsePointer					Data		-> Address;
+  FrameBase	   (proc     : CgBase.ProcIndex;
+		    level    : SHORTCARD)			-> Address;
+  ParamBase	   (proc     : CgBase.ProcIndex;
+		    level    : SHORTCARD)			-> Address;
+  AddOffset	   (offset   : LONGINT)		Address		-> Address;
+  Subscript	   (IndexMode: CgBase.Mode;
+		    LwbMode  : CgBase.Mode;
+  		    UpbMode  : CgBase.Mode;
+		    ElemSize : LONGCARD)
+			     Address * Data * Address * Address	-> Address;
+  AddAddr					Address * Data	-> Address;
+  SelectField      (offset   : LONGINT)		Address		-> Address;
+
+(* Temporaries --------------------------------------------------------- *)
+  AssignDataTempo	(mode  : CgBase.Mode;
+			 tempo : CgBase.DataTempo)	Data	-> ;
+  AssignAddressTempo	(tempo : CgBase.AddressTempo)	Address	-> ;
+  UseDataTempo		(mode  : CgBase.Mode;
+			 tempo : CgBase.DataTempo)		-> Data;
+  UseAddressTempo	(tempo : CgBase.AddressTempo)		-> Address;
+
+(* Speicherzugriff ------------------------------------------------------ *)
+  Content	(mode : CgBase.Mode)		Address		-> Data;
+
+(* Zuweisungen ---------------------------------------------------------- *)
+  Assign	(mode : CgBase.Mode)		Address * Data	->;
+  AssignLong	(size : LONGINT)		Address * Address ->;
+  Inc1		(mode : CgBase.Mode)		Address;
+  Inc2		(mode : CgBase.Mode)		Address * Data;
+  Dec1		(mode : CgBase.Mode)		Address;
+  Dec2		(mode : CgBase.Mode)		Address * Data;
+  Incl		(mode : CgBase.Mode)		Address * Data;
+  Excl		(mode : CgBase.Mode)		Address * Data;
+  InclL						Address * Data;
+  ExclL						Address * Data;
+
+(* Skip ----------------------------------------------------------------- *)
+  SkipAddress					Address		-> ;
+  SkipData					Data		-> ;
+
+(* Ganzzahl-Berechnungen ------------------------------------------------ *)
+  FixedNegate	(mode : CgBase.Mode)		Data		-> Data;
+  FixedPlus	(mode : CgBase.Mode)		Data + Data	-> Data;
+  FixedMinus	(mode : CgBase.Mode)		Data * Data	-> Data;
+  FixedMult	(mode : CgBase.Mode)		Data + Data	-> Data;
+  FixedDiv	(mode : CgBase.Mode)		Data * Data	-> Data;
+  FixedMod	(mode : CgBase.Mode)		Data * Data	-> Data;
+  FixedAbs	(mode : CgBase.Mode)		Data		-> Data;
+
+(* Gleitkomma-Berechnungen ---------------------------------------------- *)
+  FloatNegate	(mode : CgBase.Mode)		FloatExp 	    -> FloatExp;
+  FloatPlus	(mode : CgBase.Mode)		FloatExp + FloatExp -> FloatExp;
+  FloatMinus	(mode : CgBase.Mode)		FloatExp * FloatExp -> FloatExp;
+  FloatMult	(mode : CgBase.Mode)		FloatExp + FloatExp -> FloatExp;
+  FloatDiv	(mode : CgBase.Mode)		FloatExp * FloatExp -> FloatExp;
+  FloatAbs	(mode : CgBase.Mode)		FloatExp 	    -> FloatExp;
+
+(* Mengen-Berechnungen -------------------------------------------------- *)
+  SetUnion					Data + Data 		-> Data;
+  SetDifference					Data * Data 		-> Data;
+  SetIntersection				Data + Data 		-> Data;
+  SetSymDifference				Data + Data 		-> Data;
+  SetPlusSingle	(mode    : CgBase.Mode)		Data * Data 		-> Data;
+  SetPlusSingleL				Data * Data 		-> Data;
+  SetPlusRange	(LwbMode : CgBase.Mode;
+		 UpbMode : CgBase.Mode)		Data * Data * Data	-> Data;
+
+(* Konvertierungen ------------------------------------------------------ *)
+  Cap 						Data  		   -> Data;
+  Float						Data		   -> FloatExp;
+  Trunc		(opmode     : CgBase.Mode;
+		 resultmode : CgBase.Mode)	FloatExp	   -> Data;
+  Adr						Address		-> Data;
+  Coerce	(premode    : CgBase.Mode;
+		 postmode   : CgBase.Mode)	Data		   -> Data;
+
+(* Ueberpruefungen ------------------------------------------------------ *)
+  Check		(IndexMode  : CgBase.Mode;
+		 LwbMode    : CgBase.Mode;
+		 UpbMode    : CgBase.Mode;
+		 CheckLwb   : BOOLEAN;
+		 CheckUpb   : BOOLEAN)		Data * Data * Data -> Data;
+  CheckL	(IndexMode  : CgBase.Mode;
+		 LwbMode    : CgBase.Mode;
+		 UpbMode    : CgBase.Mode;
+		 CheckLwb   : BOOLEAN;
+		 CheckUpb   : BOOLEAN)		Data * Data * Data -> Data;
+
+(* Vergleiche ----------------------------------------------------------- *)
+  FixedCompare	(mode : CgBase.Mode;
+		 rel  : CgBase.Relation)	Data * Data		-> Data;
+  FloatCompare	(mode : CgBase.Mode;
+		 rel  : CgBase.Relation)	FloatExp * FloatExp	-> Data;
+  SetCompare	(rel  : CgBase.Relation)	Data * Data		-> Data;
+  PointerCompare (rel : CgBase.Relation)	Data * Data		-> Data;
+  TestMembership (ElemMode : CgBase.Mode;
+                  cond     : BOOLEAN)		Data * Data 		-> Data;
+  TestMembershipL (ElemMode : CgBase.Mode;
+                  cond     : BOOLEAN)		Data * Data 		-> Data;
+  TestOdd	(mode : CgBase.Mode;
+		 cond : BOOLEAN)		Data			-> Data;
+
+(* Verzweigungen -------------------------------------------------------- *)
+  PlaceLabel	(lab          : CgBase.Label)				-> ;
+  Goto		(tar	      : CgBase.Label)				-> ;
+  SwitchL	(mode         : CgBase.Mode;
+		 lwb          : LONGINT;
+		 upb          : LONGINT;
+		 CaseLabels   : CgBase.LabelList;
+		 DefaultLabel : CgBase.Label)	        Data; 
+  TestAndBranch (cond         : BOOLEAN;
+           	 tar          : CgBase.Label)	        Data		-> ;
+  FixedCompareAndBranch
+		(mode	      : CgBase.Mode;
+		 rel	      : CgBase.Relation;
+           	 tar	      : CgBase.Label)		Data * Data	-> ;
+  FloatCompareAndBranch
+		(mode	      : CgBase.Mode;
+		 rel  	      : CgBase.Relation;
+           	 tar  	      : CgBase.Label)		Data * Data	-> ;
+  SetCompareAndBranch
+		(rel	      : CgBase.Relation;
+		 tar	      : CgBase.Label)		Data * Data	-> ;
+  PointerCompareAndBranch
+		(rel	      : CgBase.Relation;
+		 tar	      : CgBase.Label)		Data * Data	-> ;
+  TestMembershipAndBranch
+		(ElemMode     : CgBase.Mode;
+		 cond	      : BOOLEAN;
+		 tar	      : CgBase.Label)		Data * Data	-> ;
+  TestMembershipAndBranchL
+		(ElemMode     : CgBase.Mode;
+		 cond	      : BOOLEAN;
+		 tar	      : CgBase.Label)		Data * Data	-> ;
+  TestOddAndBranch
+		(mode	      : CgBase.Mode;
+		 cond	      : BOOLEAN;
+		 tar	      : CgBase.Label)		Data		-> ;
+
+(* Prozeduraufrufe alt (MOBIL) ------------------------------------------ *)
+  PreCall	      (ParamSize    : LONGINT)			     -> ;
+  PassValue	      (mode 	    : CgBase.Mode;
+		       offset	    : LONGINT)	      Data	     -> ;
+  PassLongValue	      (size	    : LONGINT;
+		       offset	    : LONGINT)	      Address 	     -> ;
+  PassOpenArrayValue  (offset	    : LONGINT)	      Address	     -> ;
+  PassStringValue     (SourceLength : LONGINT;
+		       TargetLength : LONGINT;
+		       offset	    : LONGINT)	      Address	     -> ;
+  PassAddress	      (offset       : LONGINT)	      Address	     -> ;
+  Call						      Data	     -> ;
+  SysCall	      (sysproc      : CgBase.SysProc)		     -> ;
+  PostCall	      (paramsize    : LONGINT)			     -> ;
+  FunctionResult      (mode         : CgBase.Mode)		     -> Data;
+
+(* Prozeduraufrufe neu -------------------------------------------------- *)
+  Nil								     -> Arglist;
+  SkipArglist					      Arglist	     -> ;
+  Pass		      (mode 	    : CgBase.Mode;
+		       offset	    : LONGINT)	      Arglist * Data -> Arglist;
+  PassLong	      (size 	    : LONGINT;
+		       offset	    : LONGINT;
+		       space	    : LONGINT)	      Arglist * Data -> Arglist;
+  ProcedureCall	      (paramsize    : LONGINT)	      Arglist * Data -> ;
+  FunctionCall	      (paramsize    : LONGINT;
+		       mode	    : CgBase.Mode)    Arglist * Data -> Data;
+  RTSCall	      (paramsize    : LONGINT;
+		       sysproc      : CgBase.SysProc) Arglist	     -> ;
+  
+(* Prozeduren ----------------------------------------------------------- *)
+  BeginProcedure	(index	    : CgBase.ProcIndex;
+			 level      : SHORTCARD;
+			 FrameSize  : LONGINT;
+			 ParamSize  : LONGINT);
+  CopyOpenArray		(DataOffset : LONGINT;
+			 HighOffset : LONGINT;
+			 elemsize   : LONGINT);
+  Return		(ParamSize  : LONGINT);
+  ReturnValueL		(mode 	    : CgBase.Mode)	Data;
+  ReturnValue		(mode	    : CgBase.Mode;
+			 ParamSize  : LONGINT)		Data;
+  EndProcedure;
+
+(* Module --------------------------------------------------------------- *)
+(*
+  BeginModule		(ModulName  : ARRAY OF CHAR;
+			 FrameSize  : LONGINT);
+*)
+  EndModule;
+
+(* Sonstiges ------------------------------------------------------------ *)
+  Mark			(line	    : SHORTCARD;
+			 col	    : SHORTCARD);
+
+REGISTERS
+(*******)
+  (* Ganzzahl-Register *)
+  eax, ebx, ecx, edx,
+  (* Index-Register *)
+  esi, edi,
+  (* Stack-, Basepointer *)
+  ebp, esp,
+  (* Gleitkommazahl-Register-Stack (Koprozessor) *)
+  st, st1;
+  
+
+NONTERMINALS
+(**********)
+
+  (* ----- Register ----- *)
+  reg   	REGISTERS	<eax..esp>
+		COND_ATTRIBUTES (mode  : CgBase.Mode);
+  freg		REGISTERS	<st>;
+  fstack	REGISTERS	<st1>;
+  
+  (* ----- Konstanten ----- *)
+  Constant	COND_ATTRIBUTES (val  : LONGINT; 
+				 mode : CgBase.Mode);
+  FloatConstant	COND_ATTRIBUTES (val  : LONGREAL; 
+				 mode : CgBase.Mode);
+
+  (* ----- Variablen ----- *)
+  SimpleVariable
+  		COND_ATTRIBUTES (base : MemAdr;
+				 index : MemAdr);
+  
+  (* ----- Speicherzugriffe ----- *)
+  SymPlusOffset	
+		ADRMODE		COND_ATTRIBUTES (offset : LONGINT)
+				(symbol : CgBase.RelSymb);
+  RegPlusSymPlusOffset
+		ADRMODE		COND_ATTRIBUTES (offset : LONGINT)
+				(base : Register;
+				 symbol : CgBase.RelSymb);
+  OffsetPlusIndexMultFaktor
+		ADRMODE		COND_ATTRIBUTES (offset : LONGINT;
+						 faktor : SHORTINT)
+				(index: Register);
+  mem		
+		ADRMODE		COND_ATTRIBUTES (offset : LONGINT;
+						 faktor : SHORTINT)
+				(am: MemAdr);
+
+  (* ----- Register, Speicherzugriff oder unmittelbar ----- *)
+  
+  CMem		ADRMODE		COND_ATTRIBUTES (mode  : CgBase.Mode)
+				(am: MemAdr);
+  RegOrIm	ADRMODE		COND_ATTRIBUTES (mode  : CgBase.Mode)
+				(am: AdrMode);
+  RegOrCMem	ADRMODE		COND_ATTRIBUTES (mode  : CgBase.Mode)
+				(am: AdrMode);
+  RegOrCMemOrIm	ADRMODE		COND_ATTRIBUTES (mode  : CgBase.Mode)
+				(am: AdrMode);
+
+  (* ----- Argumentliste bei Calls ----- *)
+
+  arglist	;
+  loadln2	;
+  
+
+(* Kettenregeln --------------------------------------------------------- *)
+
+RULE	Constant.a		-> SymPlusOffset.b;
+  EVAL	{ b.offset	:= a.val; }
+  EMIT	{ b.symbol	:= NullSymb; }
+
+RULE	SymPlusOffset.a		-> RegPlusSymPlusOffset.b;
+  EVAL  { b.offset	:= a.offset; }
+  EMIT	{ b.base	:= RegNil;
+	  b.symbol	:= a.symbol; }
+
+RULE	reg			-> RegPlusSymPlusOffset.b;
+  COND	{ SizeTable[reg.mode] = 4 }
+  EVAL  { b.offset	:= 0; }
+  EMIT	{ b.symbol	:= NullSymb;
+	  b.base	:= reg; }
+
+RULE	reg			-> RegPlusSymPlusOffset.b;
+  COST	3;
+  COND	{ SizeTable[reg.mode] < 4 }
+  EVAL  { b.offset	:= 0; }
+  EMIT	{
+	b.symbol	:= NullSymb;
+	b.base		:= reg;
+.	mov{S reg.mode}{M reg.mode}l	{p reg,reg.mode},{*reg}
+	}
+
+RULE	reg <eax..ebp>		-> OffsetPlusIndexMultFaktor.b;
+  COND	{ SizeTable[reg.mode] = 4 }
+  EVAL  { b.offset	:= 0; 
+	  b.faktor	:= 1; }
+  EMIT	{ b.index	:= reg; }
+
+RULE	reg <eax..ebp>		-> OffsetPlusIndexMultFaktor.b;
+  COST	3;
+  COND	{ SizeTable[reg.mode] < 4 }
+  EVAL  { b.offset	:= 0; 
+	  b.faktor	:= 1; }
+  EMIT	{
+	b.index		:= reg;
+.	mov{S reg.mode}{M reg.mode}l	{p reg,reg.mode},{*reg}
+	}
+
+RULE	RegPlusSymPlusOffset.a	-> mem.b;
+  EVAL  { b.offset	:= a.offset;
+	  b.faktor	:= 1; }
+  EMIT	{ b.am.offset	:= a.offset;
+	  b.am.faktor	:= 1;
+	  b.am.base	:= a.base;
+	  b.am.index	:= RegNil;
+	  b.am.symbol	:= a.symbol; }
+
+RULE	OffsetPlusIndexMultFaktor.a	-> mem.b;
+  EVAL  { b.offset	:= a.offset;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.am.offset	:= a.offset;
+	  b.am.faktor	:= a.faktor;
+	  b.am.base	:= RegNil;
+	  b.am.index	:= a.index;
+	  b.am.symbol	:= NullSymb; }
+
+RULE	reg.a			-> RegOrIm.b;
+  EVAL	{ b.mode    := a.mode; }
+  EMIT	{ b.am.kind := Mreg;
+	  b.am.mode := a.mode;
+	  b.am.reg  := a; }
+
+RULE	reg.a			-> RegOrCMem.b;
+  EVAL	{ b.mode    := a.mode; }
+  EMIT	{ b.am.kind := Mreg;
+	  b.am.mode := a.mode;
+	  b.am.reg  := a; }
+
+RULE	CMem.a			-> RegOrCMem.b;
+  EVAL	{ b.mode    := a.mode; }
+  EMIT	{ b.am.kind := Mmem;
+	  b.am.mode := a.mode;
+	  b.am.mem  := a.am; }
+
+RULE	RegOrCMem.a		-> RegOrCMemOrIm.b;
+  EVAL	{ b.mode    := a.mode; }
+  EMIT	{ b.am.kind := a.am.kind;
+	  b.am.mode := a.mode;
+	  IF a.am.kind = Mreg
+	    THEN b.am.reg := a.am.reg;
+	    ELSE b.am.mem := a.am.mem;
+	  END; }
+
+RULE	Constant.a		-> RegOrIm.b;
+  EVAL	{ b.mode     := a.mode; }
+  EMIT	{ b.am.kind  := Mconst;
+	  b.am.mode  := a.mode;
+	  b.am.constant := a.val; }
+
+RULE	Constant.a		-> RegOrCMemOrIm.b;
+  EVAL	{ b.mode     := a.mode; }
+  EMIT	{ b.am.kind  := Mconst;
+	  b.am.mode  := a.mode;
+	  b.am.constant := a.val; }
+
+RULE	mem.a			-> reg.b;
+  COST 2;
+  EVAL	{ b.mode := SignedLong; }
+  EMIT	{
+	IF (a.am.offset = 0) AND
+	   (a.am.faktor = 1) AND
+	   (a.am.symbol = NullSymb) AND
+	   (((a.am.base  = b) AND (a.am.index = RegNil)) OR
+	    ((a.am.index = b) AND (a.am.base  = RegNil))) THEN
+	  (* skip leal (reg),reg *)
+	ELSE
+.	leal	{m a.am},{*b}
+	END;
+	}
+
+RULE	RegOrCMemOrIm.o		-> reg.b;
+  COST	2;
+  EVAL	{ b.mode := o.mode }
+  EMIT	{
+.	mov{M o.mode}	{a o.am},{p b,o.mode}
+	}
+
+RULE	FloatConstant.co	-> CMem.b;
+  COND	{ co.mode = FloatShort }
+  EVAL	{ b.mode := co.mode; }
+  EMIT	{
+	GetLabel (lab);
+	b.am.offset	:= 0;
+	b.am.faktor	:= 0;
+	b.am.base	:= RegNil;
+	b.am.index	:= RegNil;
+	b.am.symbol	:= lab;
+	tr1.r := co.val;
+	ConvertREALtoString (co.val, str);
+.	.data
+.	.align 4
+.{l lab}:
+.	.long	{i tr1.c}		# {s str}
+.	.text
+	}
+
+RULE	FloatConstant.co	-> CMem.b;
+  COND	{ co.mode = FloatLong }
+  EVAL	{ b.mode := co.mode; }
+  EMIT	{
+	GetLabel (lab);
+	b.am.offset	:= 0;
+	b.am.faktor	:= 0;
+	b.am.base	:= RegNil;
+	b.am.index	:= RegNil;
+	b.am.symbol	:= lab;
+	tr2.r := co.val;
+	ConvertREALtoString (co.val, str);
+.	.data
+.	.align 4
+.{l lab}:
+.	.long	{i tr2.c2},{i tr2.c1}		# {s str}
+.	.text
+	}
+
+RULE	CMem.o			-> freg <st>;
+  COST 20;
+  EMIT	{
+	PushFStack;
+.	fld{M o.mode}	{m o.am}
+	}
+  
+RULE	freg			-> fstack;
+  COST 2;
+  EMIT	{
+	IF Kommentar THEN
+.					/* Kettenregel {*freg} -> {*fstack} */
+	END;
+	}
+  
+(* Konstanten ----------------------------------------------------------- *)
+
+RULE	ShortCardConstant	-> Constant; 
+  EVAL  { Constant.val  := ShortCardConstant.c;
+	  Constant.mode := UnsignedWord; };
+  
+RULE	LongCardConstant	-> Constant; 
+  EVAL  { Constant.val := INTEGER(LongCardConstant.c);
+	  Constant.mode := UnsignedLong; };
+
+RULE	ShortIntConstant	-> Constant;
+  EVAL  { Constant.val := ShortIntConstant.c;
+	  Constant.mode := SignedWord; };
+  
+RULE	LongIntConstant		-> Constant;
+  EVAL  { Constant.val := LongIntConstant.c;
+	  Constant.mode := SignedLong; };
+  
+RULE	RealConstant		-> FloatConstant;
+  EVAL	{ FloatConstant.mode := FloatShort;
+	  FloatConstant.val  := RealConstant.c; }
+
+RULE	LongRealConstant	-> FloatConstant;
+  EVAL	{ FloatConstant.mode := FloatLong;
+	  FloatConstant.val  := LongRealConstant.c; }
+
+RULE	CharConstant		-> Constant;
+  EVAL  { Constant.val := ORD (CharConstant.c);
+	  Constant.mode := UnsignedByte; };
+  
+RULE	BoolConstant		-> Constant;
+  EVAL  { IF BoolConstant.val THEN Constant.val := 1; 
+	                      ELSE Constant.val := 0; END;
+	  Constant.mode := UnsignedByte; };
+  
+RULE	SetConstant		-> Constant;
+  EVAL  { Constant.val := LONGINT (SetConstant.c);
+	  Constant.mode := UnsignedLong; };
+  
+RULE	NilConstant		-> Constant;
+  EVAL  { Constant.val := LONGINT (NIL);
+	  Constant.mode := UnsignedLong; };
+
+RULE	ProcedureConstant	-> SymPlusOffset.b ;
+  EVAL	{ b.offset	:= 0; }
+  EMIT	{ b.symbol	:= ProcedureConstant.index^.Entry; };
+
+RULE	StringAddr		-> SymPlusOffset.b;
+  EVAL	{ b.offset	:= 0; }
+  EMIT	{ b.symbol	:= StringAddr.index; };
+       
+
+(* Adressberechnungen --------------------------------------------------- *)
+
+RULE	LocalVariable.op		-> SimpleVariable.var;
+  EVAL	{ var.base.offset  := op.offset;
+	  var.base.base	   := Regebp;
+	  var.base.symbol  := NullSymb;
+	  var.base.index   := RegNil;
+	  var.base.faktor  := 0;
+	  var.index.offset := 0;
+	  var.index.base   := RegNil;
+	  var.index.symbol := NullSymb;
+	  var.index.index  := RegNil;
+	  var.index.faktor := 0; }
+
+RULE	LocalVariable.op		-> RegPlusSymPlusOffset.b;
+  EVAL  { b.offset	:= op.offset; }
+  EMIT	{ b.base	:= Regebp;
+	  b.symbol	:= NullSymb; }
+
+ROUTINE GlobalVariable 
+     {AddOffset (Atoffset, op1, result);};
+
+RULE	StaticVariable.op		-> SimpleVariable.var;
+  EVAL	{ var.base.offset  := op.offset;
+	  var.base.base	   := RegNil;
+	  var.base.symbol  := op.module^.Statics;
+	  var.base.index   := RegNil;
+	  var.base.faktor  := 0;
+	  var.index.offset := 0;
+	  var.index.base   := RegNil;
+	  var.index.symbol := NullSymb;
+	  var.index.index  := RegNil;
+	  var.index.faktor := 0; }
+
+RULE	StaticVariable.op		-> SymPlusOffset.b;
+  EVAL	{ b.offset	:= op.offset; }
+  EMIT	{ b.symbol	:= op.module^.Statics; };
+
+ROUTINE LocalValueParam 
+     {LocalVariable (Atoffset, result);};
+
+ROUTINE LocalVarParam 
+     {LocalVariable (Atoffset, result);
+      Content   (SignedLong, result, result)};
+
+ROUTINE LocalOpenArrayValueParam
+     {LocalVariable (Atoffset, result);
+      Content   (SignedLong, result, result)};
+
+ROUTINE GlobalValueParam 
+     {AddOffset (Atoffset, op1, result);};
+
+ROUTINE GlobalVarParam 
+     {AddOffset (Atoffset, op1, result);
+      Content   (SignedLong, result, result)};
+
+ROUTINE GlobalOpenArrayValueParam 
+     {AddOffset (Atoffset, op1, result);
+      Content   (SignedLong, result, result)};
+
+ROUTINE UsePointer 
+     { result := op1 };
+
+RULE	FrameBase.op			-> reg <ebp>;
+  COND  { op.level = CurLevel };
+  EVAL  { reg.mode := SignedLong; }
+  
+RULE	FrameBase.op			-> CMem.b;
+  COND { op.level < CurLevel };
+  EVAL	{ b.mode	:= SignedLong; }
+  EMIT	{ b.am.offset	:= 4*op.level;
+	  b.am.faktor	:= 0;
+	  b.am.base	:= RegNil;
+	  b.am.index	:= RegNil;
+	  b.am.symbol	:= DisplaySym;
+	  SaveDisplay [op.level] := TRUE; };
+
+RULE	FixedPlus FrameBase Constant	-> SimpleVariable.var;
+  COND	{ FrameBase.level < CurLevel };
+  EVAL	{ var.base.offset  := Constant.val;
+	  var.base.base	   := RegNil;
+	  var.base.symbol  := NullSymb;
+	  var.base.index   := RegNil;
+	  var.base.faktor  := 1;
+	  var.index.offset := 4*FrameBase.level;
+	  var.index.base   := RegNil;
+	  var.index.symbol := DisplaySym;
+	  var.index.index  := RegNil;
+	  var.index.faktor := 0; }
+  EMIT	{ SaveDisplay [FrameBase.level] := TRUE; };
+
+ROUTINE ParamBase
+     {FrameBase (Atproc, Atlevel, result);};
+
+ROUTINE   AddOffset
+     { LongIntConstant (Atoffset, result);
+       FixedPlus (SignedLong, op1, result, result); };
+
+ROUTINE   Subscript {	       
+     (* op1 = Base, op2 = Index, op3 = Lwb, op4 = Upb *)
+	   Coerce (AtIndexMode, UnsignedLong, op2, op2);
+	   LongCardConstant (AtElemSize, result);
+	 FixedMult (UnsignedLong,  op2, result, result); 
+       AddAddr (op1, result, result);
+       e:=op3;
+     AddOffset (-INTEGER(AtElemSize)*e^.gcg^.Constant.val, result, result);
+		      (* op3 is known to be constant *) };
+
+ROUTINE   AddAddr
+     { FixedPlus (UnsignedLong, op1, op2, result); };
+     
+ROUTINE SelectField 
+     {AddOffset (Atoffset, op1, result);};
+
+
+(* Temporaries ---------------------------------------------------------- *)
+
+ROUTINE UseAddressTempo
+     {UseDataTempo (SignedLong, Attempo, result);};
+
+ROUTINE AssignAddressTempo
+     {AssignDataTempo (SignedLong, Attempo, op1)};
+
+ROUTINE AssignDataTempo
+     {LocalVariable (Attempo, optemp); Assign (Atmode, optemp, op1);};
+
+ROUTINE UseDataTempo
+     {LocalVariable (Attempo, result); Content (Atmode, result, result);};
+
+
+(* Speicherzugriff ------------------------------------------------------ *)
+
+RULE	Content.op	mem.a	-> CMem.b;
+  EVAL	{ b.mode := op.mode; }
+  EMIT  { b.am	 := a.am; }
+
+
+(* Zuweisungen ---------------------------------------------------------- *)
+
+RULE	Assign.op	mem RegOrIm.o;
+  COND	{ op.mode < FloatShort };
+  COST 2;
+  EMIT	{.	mov{M op.mode}	{a o.am},{m mem.am} };
+
+RULE	Assign.op	mem freg <st>;
+  COND	{ op.mode >= FloatShort };
+  COST 45;
+  EMIT	{
+.	fstp{M op.mode}	{m mem.am}
+	PopFStack;
+	};
+
+RULE	Assign.op      mem FloatConstant;
+  COND	{ op.mode = FloatShort };
+  COST 2;
+  EMIT	{
+	tr1.r := FloatConstant.val;
+.	movl	${i tr1.c},{m mem.am}
+	};
+	 
+RULE	Assign.op      mem FloatConstant;
+  COND	{ op.mode = FloatLong };
+  COST 4;
+  EMIT	{
+	tr2.r := FloatConstant.val;
+.	movl	${i tr2.c2},{m mem.am}
+	INC (mem.am.offset, 4);
+.	movl	${i tr2.c1},{m mem.am}	
+	};
+
+RULE	Assign.op	mem CMem;
+  COND	{ (op.mode = FloatShort) AND (CMem.mode = FloatShort) };
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+.	movl	{m CMem.am},{*s}
+.	movl	{*s},{m mem.am}
+	}
+	 
+RULE	Assign.op	mem CMem;
+  COND	{ (op.mode = FloatLong) AND (CMem.mode = FloatLong) };
+  COST 8;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+.	movl	{m CMem.am},{*s}
+.	movl	{*s},{m mem.am}
+	INC (mem.am.offset, 4);
+	INC (CMem.am.offset, 4);
+.	movl	{m CMem.am},{*s}
+.	movl	{*s},{m mem.am}
+	}
+	 
+RULE	Assign.op	SimpleVariable.dest
+			Content  SimpleVariable.src;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+	 
+(*
+RULE	AssignLong.op	reg.ziel <edi> reg.quelle <esi>;
+  COND { (op.size >= 4) }
+  COST 20;
+  CHANGE <ecx>;
+  EMIT	{
+.	movl	${i op.size DIV 4},%ecx
+.	cld
+.	repz
+.	movsl
+	IF op.size MOD 4 >= 2 THEN
+.	movsw
+	END;
+	IF op.size MOD 2 >= 1 THEN
+.	movsb
+	END;
+	};
+*)
+
+RULE	AssignLong.op	mem.ziel mem.quelle;
+  COND { (op.size >= 4) }
+  COST 20;
+  CHANGE <ecx, esi, edi>;
+  EMIT	{
+.	leal	{m quelle.am},%esi
+.	leal	{m ziel.am},%edi
+	IF ziel.am.offset MOD 4 >= 1 THEN
+	  DEC (op.size, 4-(ziel.am.offset MOD 4));
+	END;
+	IF op.size >= 4 THEN
+.	movl	${i op.size DIV 4},%ecx
+	END;
+.	cld
+	IF ziel.am.offset MOD 2 = 1 THEN
+.	movsb
+	END;
+	IF (ziel.am.offset MOD 4 = 1) OR (ziel.am.offset MOD 4 = 2) THEN
+.	movsw
+	END;
+	IF op.size >= 8 THEN
+.	repz
+	END;
+	IF op.size >= 4 THEN
+.	movsl
+	END;
+	IF op.size MOD 4 >= 2 THEN
+.	movsw
+	END;
+	IF op.size MOD 2 >= 1 THEN
+.	movsb
+	END;
+	};
+
+RULE	AssignLong.op	mem.ziel mem.quelle;
+  COND { op.size <= 8 }
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	IF op.size >= 4 THEN
+.	movl	{m quelle.am},{*s}
+.	movl	{*s},{m ziel.am}
+	INC (quelle.am.offset, 4);
+	INC (ziel.am.offset, 4);
+	DEC (op.size, 4);
+	END;
+	IF op.size >= 4 THEN
+.	movl	{m quelle.am},{*s}
+.	movl	{*s},{m ziel.am}
+	INC (quelle.am.offset, 4);
+	INC (ziel.am.offset, 4);
+	DEC (op.size, 4);
+	END;
+	IF op.size DIV 2 > 0 THEN
+.	movw	{m quelle.am},{w s}
+.	movw	{w s},{m ziel.am}
+	INC (quelle.am.offset, 2);
+	INC (ziel.am.offset, 2);
+	END;
+	IF op.size MOD 2 > 0 THEN
+.	movb	{m quelle.am},{b s}
+.	movb	{b s},{m ziel.am}
+	END;
+	}
+	
+RULE	Inc1.op		mem;
+  COST 6;
+  EMIT	{.	inc{M op.mode}	{m mem.am} };
+	  
+RULE	Dec1.op		mem;
+  COST 6;
+  EMIT	{.	dec{M op.mode}	{m mem.am} };
+	  
+RULE	Inc2.op		mem RegOrIm.o;
+  COST 7;
+  EMIT	{.	add{M op.mode}	{a o.am},{m mem.am} };
+	  
+RULE	Dec2.op		mem RegOrIm.o;
+  COST 7;
+  EMIT	{.	sub{M op.mode}	{a o.am},{m mem.am} };
+	  
+ROUTINE Incl (* Mengeneinschluss *)
+  { Coerce (Atmode, UnsignedLong, op2, op2);
+    InclL (op1, op2); };
+
+(* this is slower than btsl on a i386
+RULE	InclL.op	mem Constant.c;
+  COND	{ (c.val >= 0) AND (c.val <=31) }
+  COST 6;
+  EMIT	{.	orl	${i PowerTable[c.val]},{m mem.am} };
+*)
+
+RULE	InclL.op	mem RegOrIm.o;
+  COST 8;
+  EMIT	{.	btsl	{a o.am},{m mem.am} };
+
+ROUTINE Excl (* Mengenausschluss *)
+  { Coerce (Atmode, UnsignedLong, op2, op2);
+    ExclL (op1, op2); };
+
+(* this is slower than btrl on a i386
+RULE	ExclL.op	mem Constant.c;
+  COND	{ (c.val >= 0) AND (c.val <=31) }
+  COST 6;
+  EMIT	{
+.	andl	${i INTEGER(BITSET(-1)-BITSET(PowerTable[c.val]))},{m mem.am}
+	};
+*)
+
+RULE	ExclL.op	mem RegOrIm.o;
+  COST 8;
+  EMIT	{.	btrl	{a o.am},{m mem.am} };
+
+
+(* Skip ----------------------------------------------------------------- *)
+
+RULE	SkipAddress	RegOrCMemOrIm;
+  COST 0;
+
+RULE	SkipData	RegOrCMemOrIm;
+  COST 0;
+
+
+(* Ganzzahl-Berechnungen ------------------------------------------------ *)
+
+RULE	FixedNegate	Constant.a		-> Constant.b;
+  EVAL	{ b.val := -a.val;
+	  b.mode := a.mode; }
+
+RULE    FixedNegate.op	reg.a			-> reg.res;
+  COST 2;
+  TARGET a;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	neg{M op.mode}	{p a,op.mode}
+	};
+
+RULE	FixedAbs.op	Constant.a		-> Constant.b;
+  EVAL	{ IF a.val < 0 THEN
+	    IF a.val = MIN(LONGINT) THEN
+	      ERROR ("ABS with this argument would raise overflow", CurPos);
+	    ELSE
+	      b.val := -a.val;
+	    END;
+	  ELSE
+	    b.val := a.val
+	  END;
+	  b.mode := a.mode; }
+
+RULE	FixedAbs.op	reg.a			-> reg.res;
+  COND { SignedTable[op.mode] }; 
+  COST 11; 
+  TARGET a;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+	GetLabel (lab);
+.	cmp{M op.mode}	$0,{p a,op.mode}
+.	jg	{l lab}
+.	neg{M op.mode}	{p a,op.mode}
+.{l lab}:
+	};
+
+RULE    FixedPlus Constant.c1 Constant.c2 -> Constant.c;
+  EVAL	{ c.val := c1.val + c2.val;
+	  c.mode := c1.mode; }
+
+RULE	FixedPlus SymPlusOffset.a Constant.c -> SymPlusOffset.b;
+  EVAL	{ b.offset	:= a.offset + c.val; }
+  EMIT	{ b.symbol	:= a.symbol; }
+  
+RULE	FixedPlus SymPlusOffset.a reg -> RegPlusSymPlusOffset.b;
+  COND	{ SizeTable[reg.mode] = 4 }
+  EVAL	{ b.offset	:= a.offset; }
+  EMIT	{ b.base	:= reg;
+	  b.symbol	:= a.symbol; }
+	  
+RULE	FixedPlus SymPlusOffset.a reg -> RegPlusSymPlusOffset.b;
+  COST	3;
+  COND	{ SizeTable[reg.mode] < 4 }
+  EVAL	{ b.offset	:= a.offset; }
+  EMIT	{
+	b.base		:= reg;
+	b.symbol	:= a.symbol;
+.	mov{S reg.mode}{M reg.mode}l	{p reg,reg.mode},{*reg}
+	}
+
+RULE	FixedPlus RegPlusSymPlusOffset.a Constant.c -> RegPlusSymPlusOffset.b;
+  EVAL	{ b.offset	:= a.offset + c.val; }
+  EMIT	{ b.base	:= a.base;
+	  b.symbol	:= a.symbol; }
+
+RULE	FixedPlus OffsetPlusIndexMultFaktor.a Constant.c
+				-> OffsetPlusIndexMultFaktor.b;
+  EVAL	{ b.offset	:= a.offset + c.val;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.index	:= a.index; }
+	  
+RULE	FixedPlus OffsetPlusIndexMultFaktor.a1 RegPlusSymPlusOffset.a2 -> mem.b;
+  EVAL	{ b.offset	:= a1.offset + a2.offset;
+	  b.faktor	:= a1.faktor; }
+  EMIT	{ b.am.offset	:= a1.offset + a2.offset;
+	  b.am.faktor	:= a1.faktor;
+	  b.am.base	:= a2.base;
+	  b.am.index	:= a1.index;
+	  b.am.symbol	:= a2.symbol; }
+	  
+RULE	FixedPlus mem.a Constant.c -> mem.b;
+  EVAL	{ b.offset	:= a.offset + c.val;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.am.offset	:= a.am.offset + c.val;
+	  b.am.faktor	:= a.am.faktor;
+	  b.am.base	:= a.am.base;
+	  b.am.index	:= a.am.index;
+	  b.am.symbol	:= a.am.symbol; }
+	  
+RULE	FixedPlus SimpleVariable.src Constant.c	-> SimpleVariable.dest;
+  EVAL	{ dest.base	    := src.base;
+	  dest.index	    := src.index;
+	  dest.base.offset  := src.base.offset + c.val; }
+
+RULE    FixedPlus.op	reg.r RegOrCMemOrIm.o -> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{. 	add{M o.mode}	{a o.am},{p r,o.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedPlus
+			    Content  SimpleVariable.src
+			    Constant;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  (Constant.val = 1) }
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	inc{M op.mode}	{m dest.base}
+	}
+	 
+RULE	Assign.op	SimpleVariable.dest
+			FixedPlus
+			    Content  SimpleVariable.src
+			    RegOrIm.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	add{M op.mode}	{a o.am},{m dest.base}
+	};
+	 
+RULE	Assign.op	SimpleVariable.dest
+			FixedPlus
+			    Content  SimpleVariable.src1
+			    Content  SimpleVariable.src2;
+  COND	{ EqualMemAdr (src1.base, dest.base) AND 
+	  EqualMemAdr (src1.index, dest.index) AND
+	  EqualMemAdr (src2.base, dest.base) AND 
+	  EqualMemAdr (src2.index, dest.index) }
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	shl{M op.mode}	$1, {m dest.base}
+	};
+	 
+RULE    FixedMinus Constant.c1 Constant.c2 -> Constant.c;
+  EVAL	{ c.val := c1.val - c2.val;
+	  c.mode := c1.mode; }
+
+RULE	FixedMinus SymPlusOffset.a Constant.c -> SymPlusOffset.b;
+  EVAL	{ b.offset	:= a.offset - c.val; }
+  EMIT	{ b.symbol	:= a.symbol; }
+  
+RULE	FixedMinus reg Constant.c -> RegPlusSymPlusOffset.b;
+  COND	{ (SizeTable[reg.mode] = 4) AND (c.val > MIN(LONGINT)) }
+  EVAL	{ b.offset	:= - c.val; }
+  EMIT	{ b.base	:= reg;
+	  b.symbol	:= NullSymb; }
+	  
+RULE	FixedMinus reg Constant.c -> RegPlusSymPlusOffset.b;
+  COST	3;
+  COND	{ SizeTable[reg.mode] < 4 }
+  EVAL	{ b.offset	:= - c.val; }
+  EMIT	{
+	b.base		:= reg;
+	b.symbol	:= NullSymb;
+.	mov{S reg.mode}{M reg.mode}l	{p reg,reg.mode},{*reg}
+	}
+
+RULE	FixedMinus RegPlusSymPlusOffset.a Constant.c -> RegPlusSymPlusOffset.b;
+  EVAL	{ b.offset	:= a.offset - c.val; }
+  EMIT	{ b.base	:= a.base;
+	  b.symbol	:= a.symbol; }
+	  
+RULE	FixedMinus OffsetPlusIndexMultFaktor.a Constant.c
+				-> OffsetPlusIndexMultFaktor.b;
+  EVAL	{ b.offset	:= a.offset - c.val;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.index	:= a.index; }
+	  
+RULE	FixedMinus mem.a Constant.c -> mem.b;
+  EVAL	{ b.offset	:= a.offset - c.val;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.am.offset	:= a.am.offset - c.val;
+	  b.am.faktor	:= a.am.faktor;
+	  b.am.base	:= a.am.base;
+	  b.am.index	:= a.am.index;
+	  b.am.symbol	:= a.am.symbol; }
+	  
+RULE	FixedMinus SimpleVariable.src Constant.c -> SimpleVariable.dest;
+  EVAL	{ dest.base	    := src.base;
+	  dest.index	    := src.index;
+	  dest.base.offset  := src.base.offset - c.val; }
+
+RULE    FixedMinus.op	reg.r RegOrCMemOrIm.o -> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{. 	sub{M o.mode}	{a o.am},{p r,o.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedMinus
+			    Content  SimpleVariable.src
+			    Constant;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  (Constant.val = 1) }
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	dec{M op.mode}	{m dest.base}
+	}
+	 
+RULE	Assign.op	SimpleVariable.dest
+			FixedMinus
+			    Content  SimpleVariable.src
+			    RegOrIm.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	sub{M op.mode}	{a o.am},{m dest.base}
+	};
+	 
+RULE	FixedMinus.op
+	    Content  SimpleVariable.src1
+	    Content  SimpleVariable.src2 -> Constant.c;
+  COND	{ EqualMemAdr (src1.base, src2.base) AND 
+	  EqualMemAdr (src1.index, src2.index) }
+  EVAL	{ c.val := 0;
+	  c.mode := op.mode; }
+	 
+RULE    FixedMult Constant.c1 Constant.c2 -> Constant.c;
+  EVAL	{ c.val := c1.val * c2.val;
+	  c.mode := c1.mode; }
+
+RULE	FixedMult.op	RegOrCMemOrIm.o1 Constant.c	-> Constant.res;
+  COND	{ c.val = 0 };
+  EVAL	{ res.mode := op.mode;
+	  res.val  := 0; }
+
+RULE	FixedMult	reg.r Constant.c		-> reg.res;
+  COND { c.val = 1 };
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedMult
+			    Content  SimpleVariable.src
+			    Constant;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  (Constant.val = 1) }
+	 
+RULE	FixedMult.op	reg.r Constant.c		-> reg.res;
+  COND { c.val = 2 };
+  COST 1;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{.	add{M op.mode}	{p r,op.mode}, {p r,op.mode} };
+
+RULE	FixedMult.op	reg.r Constant.c		-> reg.res;
+  COND { c.val = 4 };
+  COST 1;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{
+.	add{M op.mode}	{p r,op.mode}, {p r,op.mode}
+.	add{M op.mode}	{p r,op.mode}, {p r,op.mode}
+	};
+
+RULE	FixedMult	OffsetPlusIndexMultFaktor.a Constant.c
+					-> OffsetPlusIndexMultFaktor.b;
+  COND { (a.faktor <= 8) AND (c.val <= 8) AND
+	 ((c.val*a.faktor=0) OR (c.val*a.faktor=1) OR (c.val*a.faktor=2) OR
+	  (c.val*a.faktor=4) OR (c.val*a.faktor=8)) };
+  EVAL	{ b.offset := a.offset * c.val;
+	  b.faktor := a.faktor * c.val; }
+  EMIT	{ b.index  := a.index; }
+
+RULE	FixedMult	OffsetPlusIndexMultFaktor.a Constant.c	-> mem.b;
+  COND { (a.faktor <= 8) AND (c.val <= 9) AND
+	 ((c.val*a.faktor=3) OR (c.val*a.faktor=5) OR (c.val*a.faktor=9)) };
+  EVAL	{ b.faktor := a.faktor * c.val - 1;
+	  b.offset := a.offset * c.val; }
+  EMIT	{ b.am.faktor := a.faktor * c.val - 1;
+	  b.am.offset := a.offset * c.val;
+	  b.am.index  := a.index;
+	  b.am.base   := a.index;
+	  b.am.symbol := NullSymb; }
+
+RULE	FixedPlus
+	    SimpleVariable.base
+	    FixedMult
+	    	Coerce Content SimpleVariable.index
+		Constant.c	-> SimpleVariable.dest;
+  COND	{ IsNilMemAdr (base.index) AND
+	  IsNilMemAdr (index.index) AND
+	  (SizeTable[Coerce.premode] = 4) AND 
+	  (SizeTable[Coerce.postmode] = 4) AND 
+	  (SizeTable[FixedMult.mode] = 4) AND 
+ 	  (SizeTable[FixedPlus.mode] = 4) AND
+	  ((c.val = 1) OR (c.val = 2) OR (c.val = 4) OR (c.val = 8)) }
+ EVAL	{ dest.base	    := base.base;
+	  dest.index	    := index.base;
+	  dest.base.faktor  := c.val; }
+
+RULE	FixedMult.op	reg.r Constant.c	-> reg.res;
+  COND { (NOT SignedTable [op.mode] OR (c.val > 0)) AND
+	      IsPowerOfTwo (c.val) AND (Log2(c.val) # 0) };
+  COST 3;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	shl{M op.mode}	${i Log2(c.val)}, {p r,op.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedMult
+			    Content  SimpleVariable.src
+			    Constant.c;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  (NOT SignedTable [op.mode] OR (c.val > 0)) AND
+	  IsPowerOfTwo (c.val) AND (Log2(c.val) # 0) };
+  COST 4;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	shl{M op.mode}	${i Log2(c.val)}, {m dest.base}
+	};
+	 
+RULE	FixedMult.op	reg.r Constant.c	-> mem.b;
+  COND { (SizeTable [r.mode] = 4) AND (c.val > 1) AND
+	 (c.val MOD 3 = 0) AND IsPowerOfTwo (c.val DIV 3) };
+  COST 3;
+  EVAL	{ b.faktor := 2;
+	  b.offset := 0; }
+  EMIT	{
+.	shl{M op.mode}	${i Log2(c.val DIV 3)}, {p r,op.mode}
+	  b.am.faktor := 2;
+	  b.am.offset := 0;
+	  b.am.index  := r;
+	  b.am.base   := r;
+	  b.am.symbol := NullSymb;
+	}
+
+RULE	FixedMult.op	reg.r Constant.c	-> mem.b;
+  COND { (SizeTable [r.mode] = 4) AND (c.val > 1) AND
+	 (c.val MOD 5 = 0) AND IsPowerOfTwo (c.val DIV 5) };
+  COST 3;
+  EVAL	{ b.faktor := 4;
+	  b.offset := 0; }
+  EMIT	{
+.	shl{M op.mode}	${i Log2(c.val DIV 5)}, {p r,op.mode}
+	  b.am.faktor := 4;
+	  b.am.offset := 0;
+	  b.am.index  := r;
+	  b.am.base   := r;
+	  b.am.symbol := NullSymb;
+	}
+
+RULE	FixedMult.op	reg.r Constant.c	-> mem.b;
+  COND { (SizeTable [r.mode] = 4) AND (c.val > 1) AND
+	 (c.val MOD 9 = 0) AND IsPowerOfTwo (c.val DIV 9) };
+  COST 3;
+  EVAL	{ b.faktor := 8;
+	  b.offset := 0; }
+  EMIT	{
+.	shl{M op.mode}	${i Log2(c.val DIV 9)}, {p r,op.mode}
+	  b.am.faktor := 8;
+	  b.am.offset := 0;
+	  b.am.index  := r;
+	  b.am.base   := r;
+	  b.am.symbol := NullSymb;
+	}
+
+RULE  FixedMult.op	reg.o1 RegOrCMemOrIm.o2		-> reg.res;
+(*  COND { SignedTable [op.mode] }; *)
+  COST 12;
+  TARGET o1;
+  EVAL	{ res.mode := op.mode; }
+  EMIT  {.	imul{M op.mode}	{a o2.am},{p o1,op.mode} };
+
+RULE  FixedMult.op	Constant.c RegOrCMem.o2		-> reg.res;
+(*  COND { SignedTable [op.mode] }; *)
+  COST 12;
+  EVAL	{ res.mode := op.mode; }
+  EMIT  {.	imul{M op.mode}	${i c.val},{a o2.am},{p res,op.mode} };
+
+RULE	FixedMult.op
+	    Content  SimpleVariable.src1
+	    Content  SimpleVariable.src2 -> reg.res;
+  COND	{ EqualMemAdr (src1.base, src2.base) AND 
+	  EqualMemAdr (src1.index, src2.index) }
+  COST 13;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+EmitIndex (src1.base, src1.index, res);
+.	mov{M op.mode}	{m src1.base},{p res,op.mode}
+.	imul{M op.mode}	{p res,op.mode},{p res,op.mode}
+	};
+	 
+RULE	Assign.op	SimpleVariable.dest
+			FixedMult
+			    Content  SimpleVariable.src1
+			    Content  SimpleVariable.src2;
+  COND	{ EqualMemAdr (src1.base, dest.base) AND 
+	  EqualMemAdr (src1.index, dest.index) AND
+	  EqualMemAdr (src2.base, dest.base) AND 
+	  EqualMemAdr (src2.index, dest.index) }
+  COST 14;
+  SCRATCH s <eax..edi>, res <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	mov{M op.mode}	{m dest.base},{p res,op.mode}
+.	imul{M op.mode}	{p res,op.mode},{p res,op.mode}
+.	mov{M op.mode}	{p res,op.mode},{m dest.base}
+	};
+	 
+RULE	FixedMult.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <eax>;
+  (* Die zulaessigen Register fuer r2 sind notwendig, sonst *)
+  (* Register allocation not possible                       *)
+  COND { NOT SignedTable [op.mode] };
+  COST 12;
+  TARGET r1;
+  CHANGE <edx>;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	mul{M op.mode}	{p r2,op.mode} };
+
+(* Funktioniert nicht wegen Bug in Registerallokator:
+RULE	FixedMult.op	reg.o1 <eax> RegOrCMem.o2	-> reg.res <eax>;
+  COND { NOT SignedTable [op.mode] };
+  COST 12;
+  TARGET o1;
+  CHANGE <edx>;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	mul{M op.mode}	{a o2.am} };
+*)
+
+RULE	FixedDiv	Constant.a Constant.b	-> Constant.c;
+  EVAL { IF b.val = 0 THEN ERROR ("DIV by 0", CurPos);
+		      ELSE c.val := a.val DIV b.val END;
+	  c.mode := a.mode; }
+
+RULE	FixedDiv.op	reg.r Constant.c	-> reg.res;
+  COND { c.val = 0 };
+  TARGET r;
+  EVAL	{ ERROR ("DIV by 0", CurPos);
+	  res.mode := op.mode; }
+
+RULE	FixedDiv.op	reg.r Constant.c	-> reg.res;
+  COND { c.val = 1 };
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+
+RULE	FixedDiv	OffsetPlusIndexMultFaktor.a Constant.c
+					-> OffsetPlusIndexMultFaktor.b;
+  COND { (a.faktor > 0) AND (a.faktor <= 8) AND
+         (c.val <= 8) AND (c.val <> 0) AND
+         (a.faktor MOD c.val = 0) AND (a.offset MOD c.val = 0) AND
+	 ((a.faktor DIV c.val = 1) OR (a.faktor DIV c.val = 2) OR
+	  (a.faktor DIV c.val = 4) OR (a.faktor DIV c.val = 8)) };
+  EVAL	{ b.faktor := a.faktor DIV c.val;
+	  b.offset := a.offset DIV c.val; }
+  EMIT	{ b.index  := a.index; }
+
+RULE	FixedDiv.op	reg.r Constant.c	-> reg.res;
+  COND { (NOT SignedTable [op.mode]) AND
+	 IsPowerOfTwo (c.val) AND (Log2 (c.val) # 0) };
+  COST 4;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	shr{M op.mode}	${i Log2 (c.val)}, {p r,op.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedDiv
+			    Content  SimpleVariable.src
+			    Constant.c;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  (NOT SignedTable [op.mode]) AND
+	  IsPowerOfTwo (c.val) AND (Log2(c.val) # 0) };
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	shr{M op.mode}	${i Log2(c.val)}, {m dest.base}
+	};
+	 
+RULE	FixedDiv.op	reg.r Constant.c	-> reg.res;
+  COND { (SignedTable [op.mode]) AND
+	 IsPowerOfTwo (c.val) AND (Log2 (c.val) # 0) };
+  COST 4;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	sar{M op.mode}	${i Log2 (c.val)}, {p r,op.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedDiv
+			    Content  SimpleVariable.src
+			    Constant.c;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  SignedTable [op.mode] AND
+	  IsPowerOfTwo (c.val) AND (Log2(c.val) # 0) };
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	sar{M op.mode}	${i Log2(c.val)}, {m dest.base}
+	};
+	 
+RULE	FixedDiv.op
+	    Content  SimpleVariable.src1
+	    Content  SimpleVariable.src2 -> Constant.c;
+  COND	{ EqualMemAdr (src1.base, src2.base) AND 
+	  EqualMemAdr (src1.index, src2.index) }
+  EVAL	{ c.val := 1;
+	  c.mode := op.mode; }
+	 
+RULE	FixedDiv.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <eax>;
+  COND { op.mode = SignedLong };
+  COST 14;
+  TARGET r1;
+  CHANGE <edx>;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	cdq
+.	idiv{M op.mode}	{p r2,op.mode}
+	};
+
+RULE	FixedDiv.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <eax>;
+  COND { (op.mode = UnsignedLong) OR (op.mode = UnsignedWord) };
+  COST 14;
+  TARGET r1;
+  CHANGE <edx>;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	xor{M op.mode}	{p Regedx,op.mode},{p Regedx,op.mode}
+.	div{M op.mode}	{p r2,op.mode}
+	};
+
+RULE	FixedDiv.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <eax>;
+  COND { op.mode = SignedWord };
+  COST 14;
+  TARGET r1;
+  CHANGE <edx>;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	cwd
+.	idiv{M op.mode}	{p r2,op.mode}
+	};
+
+RULE	FixedMod	Constant.a Constant.b	-> Constant.c;
+  EVAL { IF b.val = 0 THEN ERROR ("MOD by 0", CurPos);
+		      ELSE c.val := a.val MOD b.val END;
+	  c.mode := a.mode; }
+
+RULE	FixedMod.op	reg.r Constant.c	-> reg.res;
+  COND { IsPowerOfTwo (c.val) & (NOT SignedTable[op.mode]) };
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{.	and{M op.mode}	${i c.val-1}, {p r,op.mode} };
+
+RULE	Assign.op	SimpleVariable.dest
+			FixedMod
+			    Content  SimpleVariable.src
+			    Constant.c;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) AND
+	  IsPowerOfTwo (c.val) & (NOT SignedTable[op.mode]) };
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	and{M op.mode}	${i c.val-1}, {m dest.base}
+	};
+	 
+RULE	FixedMod.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <edx>;
+  COND { op.mode = SignedLong };
+  COST 14;
+  (* CHANGE <eax>; *)
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	cdq
+.	idiv{M op.mode}	{p r2,op.mode}
+	};
+
+RULE	FixedMod.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <edx>;
+  COND { (op.mode = UnsignedLong) OR (op.mode = UnsignedWord) };
+  COST 14;
+  (* CHANGE <eax>; *)
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	xor{M op.mode}	{p res,op.mode},{p res,op.mode}
+.	div{M op.mode}	{p r2,op.mode}
+	};
+
+RULE	FixedMod.op
+	  reg.r1 <eax> reg.r2 <ebx,ecx,esi,edi,esp,ebp>	-> reg.res <edx>;
+  COND { op.mode = SignedWord };
+  COST 14;
+  (* CHANGE <eax>; *)
+  EVAL	{ res.mode := op.mode; }
+  EMIT	{
+.	cwd
+.	idiv{M op.mode}	{p r2,op.mode}
+	};
+
+
+(* Gleitkomma-Berechnungen ---------------------------------------------- *)
+
+RULE	FloatNegate.op	freg.fr	<st>		       	-> freg <st>;
+  COST 24;
+  TARGET fr;
+  EMIT	{.	fchs };
+
+RULE	FloatPlus.op	freg.fr <st> CMem		-> freg <st>;
+  COST 30; 
+  TARGET fr;
+  EMIT	{.	fadd{M op.mode}	{m CMem.am} };
+
+RULE	FloatPlus.op	freg.fr <st> fstack.b		-> freg <st>;
+  COST 30; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fadd'); };
+
+RULE	FloatMinus.op	freg.fr <st> CMem		-> freg <st>;
+  COST 30;
+  TARGET fr;
+  EMIT	{.	fsub{M op.mode}	{m CMem.am} };
+	 
+RULE	FloatMinus.op	CMem freg.fr <st>		-> freg <st>;
+  COST 30;
+  TARGET fr;
+  EMIT	{.	fsubr{M op.mode}	{m CMem.am} };
+	 
+RULE	FloatMinus.op	fstack.b freg.fr <st>		-> freg <st>;
+  COST 30; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fsubr'); };
+
+RULE	FloatMinus.op	freg.fr <st> fstack.b		-> freg <st>;
+  COST 30; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fsub'); };
+
+RULE	FloatMult.op	freg.fr <st> CMem		-> freg <st>;
+  COST 40;
+  TARGET fr;
+  EMIT	{.	fmul{M op.mode}	{m CMem.am} };
+
+RULE	FloatMult.op	freg.fr <st> fstack.b		-> freg <st>;
+  COST 40; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fmul'); };
+
+RULE	FloatDiv.op	freg.fr <st> CMem		-> freg <st>;
+  COST 90;
+  TARGET fr;
+  EMIT	{.	fdiv{M op.mode}	{m CMem.am} };
+	 
+RULE	FloatDiv.op	CMem freg.fr <st>		-> freg <st>;
+  COST 90;
+  TARGET fr;
+  EMIT	{.	fdivr{M op.mode}	{m CMem.am} };
+
+RULE	FloatDiv.op	fstack.b reg.fr <st>		-> freg <st>;
+  COST 90; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fdiv'); };
+
+RULE	FloatDiv.op	freg.fr <st> fstack.b		-> freg <st>;
+  COST 90; 
+  TARGET fr;
+  EMIT	{ FloatOperation ('fdivr'); };
+
+RULE	FloatAbs.op	freg.fr	<st>			-> freg <st>;
+  COST 22;
+  TARGET fr;
+  EMIT	{.	fabs };
+
+
+(* Mengen-Berechnungen -------------------------------------------------- *)
+
+RULE    SetUnion	(reg.r RegOrCMemOrIm.o) -> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{. 	orl	{a o.am}, {*r} };
+
+RULE	Assign.op	SimpleVariable.dest
+			SetUnion
+			    Content  SimpleVariable.src
+			    RegOrIm.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	orl	{a o.am},{m dest.base}
+	};
+	 
+RULE    SetDifference	(RegOrCMemOrIm.o1 reg.o2) -> reg.res;
+  COST 4;
+  TARGET o2;
+  EVAL	{ res.mode := o2.mode; }
+  EMIT	{
+.	notl	{*o2}
+. 	andl	{a o1.am}, {*o2}
+	};
+
+RULE    SetDifference	(reg.o1 Constant.c) -> reg.res;
+  COST 2;
+  TARGET o1;
+  EVAL	{ res.mode := o1.mode; }
+  EMIT	{
+. 	andl	${i INTEGER(BITSET(-1) - BITSET(c.val))}, {*o1}
+	};
+
+RULE	Assign.op	SimpleVariable.dest
+			SetDifference
+			    Content  SimpleVariable.src
+			    reg.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	notl	{*o}
+. 	andl	{*o},{m dest.base}
+	};
+	 
+RULE	Assign.op	SimpleVariable.dest
+			SetDifference
+			    Content  SimpleVariable.src
+			    Constant.c;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 3;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+. 	andl	${i INTEGER(BITSET(-1) - BITSET(c.val))},{m dest.base}
+	};
+	 
+RULE    SetIntersection	(reg.r RegOrCMemOrIm.o) -> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{. 	andl	{a o.am}, {*r} };
+
+RULE	Assign.op	SimpleVariable.dest
+			SetIntersection
+			    Content  SimpleVariable.src
+			    RegOrIm.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	andl	{a o.am},{m dest.base}
+	};
+	 
+RULE    SetSymDifference	(reg.r RegOrCMemOrIm.o) -> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{. 	xorl	{a o.am}, {*r} };
+
+RULE	Assign.op	SimpleVariable.dest
+			SetSymDifference
+			    Content  SimpleVariable.src
+			    RegOrIm.o;
+  COND	{ EqualMemAdr (src.base, dest.base) AND 
+	  EqualMemAdr (src.index, dest.index) }
+  COST 5;
+  SCRATCH s <eax..edi>;
+  EMIT	{
+	EmitIndex (dest.base, dest.index, s);
+.	xorl	{a o.am},{m dest.base}
+	};
+	 
+ROUTINE SetPlusSingle
+  { Coerce (Atmode, UnsignedLong, op2, op2);
+    SetPlusSingleL (op1, op2, result); };
+
+RULE	SetPlusSingleL	reg.r Constant.c	-> reg.res;
+  COST 2;
+  TARGET r; 
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{. 	orl	${i PowerTable[c.val]}, {*r} }; 
+  
+RULE	SetPlusSingleL	(reg.r RegOrIm.o) -> reg.res;
+  COST 6;
+  TARGET r; 
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{.	btsl	{a o.am}, {*r} };
+
+RULE	SetPlusRange	reg.r Constant.lwb Constant.upb	-> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{.	orl	${i PowerTable[upb.val+1]-PowerTable[lwb.val]},{*r} }
+
+RULE	SetPlusRange.op
+	  reg.r <eax,ebx,edx,esi,edi>  RegOrCMemOrIm.lwb  reg.upb <ecx>
+	  	-> reg.res <eax,ebx,edx,esi,edi>;
+  COST 25; 
+  TARGET r;
+  SCRATCH s <eax,ebx,edx,esi,edi>;
+  EVAL  { res.mode := r.mode; }
+  EMIT	{ GetLabel(lab);
+. 	sub{M op.LwbMode} 	{a lwb.am},{p Regecx,op.LwbMode}
+. 	jl	{l lab}
+.	incb	%cl
+.	movl	$-1,{*s}
+.	shll	%cl,{*s}
+.	notl	{*s}
+.	mov{M op.LwbMode}	{a lwb.am},{p Regecx,op.LwbMode}
+.	shll	%cl,{*s}
+.	orl	{*s},{*r}
+.{l lab}:
+       };
+
+(* Konvertierungen ------------------------------------------------------ *)
+
+RULE	Cap	reg.r				-> reg.res;
+  COST 4;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{ GetLabel(lab);
+.	cmpb	${i ORD('a')},{b r}
+.	jl	{l lab}
+.	cmpb	${i ORD('z')},{b r}
+.	jg	{l lab}
+.	subb	${i ORD('a') - ORD('A')},{b r}
+.{l lab}:
+	}
+
+RULE	Float	CMem				-> freg <st>;
+  COST 60;
+  EMIT	{
+	GetLabel(lab);
+	PushFStack;
+.	fildl	{m CMem.am}
+.	cmpl	$0x7fffffff,{m CMem.am}
+.	jbe	{l lab}
+.	faddl	TwoExp32_
+.{l lab}:
+	};
+
+RULE	Float	reg				-> freg <st>;
+  COST 64;
+  EMIT	{
+	GetLabel(lab);
+	PushFStack;
+.	pushl	{*reg}
+.	fildl	(%esp)
+.	addl	$4,%esp
+.	cmpl	$0x7fffffff,{*reg}
+.	jbe	{l lab}
+.	faddl	TwoExp32_
+.{l lab}:
+	};
+
+RULE	Float	Constant			-> FloatConstant;
+  EVAL	{ FloatConstant.mode := FloatShort;
+	  FloatConstant.val  := FLOAT(CARDINAL(Constant.val)); }
+
+RULE	Trunc.op	FloatConstant		-> Constant;
+  COND	{ (FloatConstant.val <= FloatMaxCardinal) AND
+	  (FloatConstant.val >= LFLOAT(MIN(CARDINAL))) }
+  EVAL	{ Constant.mode := UnsignedLong;
+	  r := FloatConstant.val;
+	  Constant.val  := INTEGER(TRUNC(r)); }
+
+RULE	Trunc.op	freg <st>			-> reg;
+  COST 94;
+  CHANGE <eax>;
+  EVAL	{ reg.mode := UnsignedLong; }
+  EMIT	{
+	GetLabel(lab);
+.	fcoml	TwoExp31_
+.	fstsw	%ax
+.	sahf
+.	jb	{l lab}
+.	fsubl	TwoExp32_
+.{l lab}:
+.	subl	$4,%esp
+	CheckRoundMode2 (RndZero, RndNegInf);
+.	fistpl	(%esp)
+.	popl	{*reg}
+	PopFStack;
+	};
+
+RULE	Assign	mem	Trunc	freg <st>;
+  COST 90;
+  CHANGE <eax>;
+  EMIT	{
+	GetLabel(lab);
+.	fcoml	TwoExp31_
+.	fstsw	%ax
+.	sahf
+.	jb	{l lab}
+.	fsubl	TwoExp32_
+.{l lab}:
+	CheckRoundMode2 (RndZero, RndNegInf);
+.	fistpl	{m mem.am }
+	PopFStack;
+	};
+
+ROUTINE Adr
+     { result := op1 };
+
+RULE	Coerce.op Constant.a			-> Constant.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) };
+  EVAL	{ b.val := a.val;
+	  b.mode := op.postmode; };
+
+RULE	Coerce.op SymPlusOffset.a		-> SymPlusOffset.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[op.premode] >= SizeTable[op.postmode]) };
+  EVAL	{ b.offset	:= a.offset; }
+  EMIT	{ b.symbol	:= a.symbol; };
+
+RULE	Coerce.op RegPlusSymPlusOffset.a	-> RegPlusSymPlusOffset.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[op.premode] >= SizeTable[op.postmode]) };
+  EVAL	{ b.offset	:= a.offset; }
+  EMIT	{ b.base	:= a.base;
+	  b.symbol	:= a.symbol; };
+
+RULE	Coerce.op OffsetPlusIndexMultFaktor.a -> OffsetPlusIndexMultFaktor.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[op.premode] >= SizeTable[op.postmode]) };
+  EVAL	{ b.offset	:= a.offset;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.index	:= a.index; }
+
+RULE	Coerce.op mem.a	     			-> mem.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[op.premode] >= SizeTable[op.postmode]) };
+  EVAL	{ b.offset	:= a.offset;
+	  b.faktor	:= a.faktor; }
+  EMIT	{ b.am.offset	:= a.am.offset;
+	  b.am.faktor	:= a.am.faktor;
+	  b.am.base	:= a.am.base;
+	  b.am.index	:= a.am.index;
+	  b.am.symbol	:= a.am.symbol; };
+
+RULE	Coerce.op CMem.a	     		-> CMem.b;
+  COND	{ (SizeTable[op.premode] = SizeTable[op.postmode]) };
+  EVAL	{ b.mode	:= op.postmode; }
+  EMIT	{ b.am.offset	:= a.am.offset;
+	  b.am.faktor	:= a.am.faktor;
+	  b.am.base	:= a.am.base;
+	  b.am.index	:= a.am.index;
+	  b.am.symbol	:= a.am.symbol; };
+
+RULE	Coerce.op RegOrCMem.o	     		-> reg.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[op.premode] < SizeTable[op.postmode]) };
+  COST 3;
+  EVAL	{ b.mode := op.postmode }
+  EMIT	{
+	IF SignedTable[op.premode] AND SignedTable[op.postmode] THEN
+.	movs{M o.mode}{M op.postmode}	{a o.am},{p b,op.postmode}
+	ELSE
+.	movz{M o.mode}{M op.postmode}	{a o.am},{p b,op.postmode}
+	END;
+	};
+	
+RULE	Coerce.op reg.a				-> reg.b;
+  COND	{ (a.mode < FloatShort) AND (op.postmode < FloatShort) AND
+	  (SizeTable[a.mode] >= SizeTable[op.postmode]) };
+  EVAL	{ b.mode := op.postmode; }
+  TARGET a;
+  
+RULE	Coerce.op Constant.a			-> FloatConstant.b;
+  COND	{ (op.premode < FloatShort) AND (op.postmode >= FloatShort) };
+  EVAL	{ b.val := REAL(a.val);
+	  b.mode := op.postmode; }
+
+RULE	Coerce.op FloatConstant.a		-> FloatConstant.b;
+  COND	{ (op.premode = FloatShort) AND (op.postmode = FloatLong) };
+  EVAL	{ b.val := a.val;
+	  b.mode := op.postmode; }
+
+RULE	Coerce.op	freg.fr	<st>		-> freg;
+  COND	{ (op.premode >= FloatShort) AND (op.postmode >= FloatShort) };
+  TARGET fr;
+
+RULE	Coerce.op	freg.fr	<st>		-> CMem.b;
+  (* no conversion, just type transfer *)
+  COND	{ (op.premode = FloatShort) AND (op.postmode < FloatShort) };
+  COST 45;
+  EVAL	{ b.mode := op.postmode; }
+  EMIT	{
+	DeclareTransferTempo;
+	b.am.offset	:= TransferTempo;
+	b.am.faktor	:= 0;
+	b.am.base	:= Regebp;
+	b.am.index	:= RegNil;
+	b.am.symbol	:= NullSymb;
+.	fstp{M op.premode}	{m b.am}
+	PopFStack;
+	}
+
+RULE	Coerce.op	RegOrIm.o			-> CMem.b;
+  (* no conversion, just type transfer *)
+  COND	{ (op.premode < FloatShort) AND (op.postmode = FloatShort) };
+  COST 2;
+  EVAL	{ b.mode := op.postmode; }
+  EMIT	{
+	DeclareTransferTempo;
+	b.am.offset	:= TransferTempo;
+	b.am.faktor	:= 0;
+	b.am.base	:= Regebp;
+	b.am.index	:= RegNil;
+	b.am.symbol	:= NullSymb;
+.	mov{M op.premode}	{a o.am},{m b.am}
+	};
+
+ROUTINE Check
+     { IF SizeTable[AtIndexMode] = 1
+         THEN Coerce (AtIndexMode, SignedLong, op1, op1);
+	      AtIndexMode := SignedLong;
+       END;
+       CheckL (AtIndexMode, AtLwbMode, AtUpbMode, AtCheckLwb, AtCheckUpb,
+	       op1, op2, op3, result);
+     };
+
+RULE	CheckL.op	reg.r Constant.lwb Constant.upb	-> reg.res;
+  COND	{ (lwb.val = 0) AND (upb.val = -1) }
+  EVAL	{ res.mode := r.mode; }
+  TARGET r;
+
+RULE	CheckL.op	reg.r Constant.lwb Constant.upb	-> reg.res;
+  COND { (SignedTable[op.LwbMode] OR
+	  ((op.LwbMode <= UnsignedWord) AND (lwb.val <= MAX(SHORTINT))) OR
+	  ((op.LwbMode  = UnsignedLong) AND (lwb.val < 0))) AND
+	 (SignedTable[op.UpbMode] OR
+	  ((op.UpbMode <= UnsignedWord) AND (upb.val <= MAX(SHORTINT))) OR
+	  ((op.UpbMode  = UnsignedLong) AND (upb.val < 0))) AND
+         (SizeTable[r.mode] > 1)  };
+  COST 10;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{
+	GetLabel(lab);
+.	.data
+	CASE SizeTable[r.mode] OF
+	| 4:
+.	.align 4
+.{l lab}:
+.	.long	{i lwb.val},{i upb.val}
+	| 2:
+.	.align 2
+.{l lab}:
+.	.word	{i lwb.val},{i upb.val}
+	END;
+.	.text
+.	bound{M r.mode}	{p r,r.mode},{l lab}
+	};
+
+RULE	CheckL.op   reg.r RegOrCMemOrIm.lwb RegOrCMemOrIm.upb	-> reg.res;
+  COND { SignedTable[op.LwbMode] AND SignedTable[op.UpbMode] AND
+         (SizeTable[r.mode] > 1)  };
+  COST 16;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{
+.	push{M r.mode}	{a upb.am}
+.	push{M r.mode}	{a lwb.am}
+.	bound{M r.mode}	{p r,r.mode},(%esp)
+.	addl	${i 2*SizeTable[r.mode]},%esp
+	};
+
+RULE	CheckL.op   reg.r RegOrCMemOrIm.lwb RegOrCMemOrIm.upb	-> reg.res;
+  COND { (op.LwbMode < FloatShort) AND (op.UpbMode < FloatShort) };
+  COST 20;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{
+	GetLabel(lab);
+	GetLabel(lab2);
+	IF op.CheckLwb THEN
+.	cmp{M op.LwbMode}	{a lwb.am},{p r,op.LwbMode}
+.	j{s RelationTable[RelLess][SignedTable[op.LwbMode]]}	{l lab2}
+	END;
+	IF op.CheckUpb THEN
+.	cmp{M op.UpbMode}	{a upb.am},{p r,op.UpbMode}
+.	j{s RelationTable[RelLessOrEqual][SignedTable[op.UpbMode]]}	{l lab}
+	ELSE
+.	jmp	{l lab}
+	END;
+.{l lab2}:
+.   	call	BoundErr_		
+.{l lab}:
+	};
+
+RULE	CheckL.op	freg.a CMem.lwb CMem.upb	-> freg;
+  COND { op.IndexMode >= FloatShort }
+  COST 50;
+  TARGET a;
+  CHANGE <eax>;
+  EMIT  {
+	GetLabel(lab);
+	GetLabel(lab2);
+	IF op.CheckLwb THEN
+.	fcom{M op.LwbMode}	{m lwb.am}
+.	fstsw	%ax
+.	sahf
+.	jb	{l lab2}
+	END;
+	IF op.CheckUpb THEN
+.	fcom{M op.UpbMode}	{m upb.am}
+.	fstsw	%ax
+.	sahf
+.	jbe	{l lab}
+	ELSE
+.	jmp	{l lab}
+	END;
+.{l lab2}:
+.   	call	BoundErr_		
+.{l lab}:
+	};
+  
+(* Vergleiche ----------------------------------------------------------- *)
+
+RULE	FixedCompare.op	reg.o1 RegOrCMemOrIm.o2		-> reg.res <eax..edx>;
+  COST 6;
+  EVAL	{ res.mode := UnsignedByte; }
+  EMIT	{
+.	cmp{M op.mode}	{a o2.am},{p o1,op.mode}
+.	set{s RelationTable[op.rel][SignedTable[op.mode]]}	{b res}
+	};
+
+RULE	FixedCompare.op	CMem.o1 RegOrIm.o2		-> reg.res <eax..edx>;
+  COST 6;
+  EVAL	{ res.mode := UnsignedByte; }
+  EMIT	{
+.	cmp{M op.mode}	{a o2.am},{m o1.am}
+.	set{s RelationTable[op.rel][SignedTable[op.mode]]}	{b res}
+	};
+
+RULE	FixedCompare.op	Constant.o1 RegOrCMem.o2	-> reg.res <eax..edx>;
+  COST 6;
+  EVAL	{ res.mode := UnsignedByte; }
+  EMIT	{
+.	cmp{M op.mode}	${i o1.val},{a o2.am}
+.	set{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{b res}
+	};
+
+RULE	FloatCompare.op	freg <st> CMem			-> reg.r <ebx..edx>;
+  COST 48; (* 26 + 15 + 3 + 4 *)
+  CHANGE <eax>;
+  EVAL	{ r.mode := UnsignedByte; }
+  EMIT	{
+.	fcomp{M CMem.mode}	{m CMem.am}
+.	fstsw	%ax
+.	sahf
+.	set{s RelationTable[op.rel][SignedTable[op.mode]]}	{b r}
+	PopFStack;
+	}
+	
+RULE	FloatCompare.op	CMem freg <st>			-> reg.r <ebx..edx>;
+  COST 48; (* 26 + 15 + 3 + 4 *)
+  CHANGE <eax>;
+  EVAL	{ r.mode := UnsignedByte; }
+  EMIT	{
+.	fcomp{M CMem.mode}	{m CMem.am}
+.	fstsw	%ax
+.	sahf
+.	set{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{b r}
+	PopFStack;
+	}
+	
+RULE	FloatCompare.op	fstack freg <st>		-> reg.r <ebx..edx>;
+  COST 48; (* 26 + 15 + 3 + 4 *)
+  CHANGE <eax>;
+  EVAL	{ r.mode := UnsignedByte; }
+  EMIT	{
+	INC (FStackStart);
+	IF FStackTempo[FStackStart] # NoTempo THEN
+.	fcompl	{i FStackTempo[FStackStart]}(%ebp)
+	  DEC (CurFStackSize);
+	ELSE
+.	fcompp
+	  DEC (CurFStackSize, 2);
+	END;
+.	fstsw	%ax
+.	sahf
+.	set{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{b r}
+	};
+
+RULE	SetCompare.op	reg.r RegOrCMemOrIm.o		-> reg.res <eax..edx>;
+  COND { op.rel <= RelUnequal };
+  COST 8;
+  EVAL	{ res.mode := UnsignedByte; }
+  EMIT	{
+.	cmpl	{a o.am},{*r}
+.	set{s RelationTable[op.rel][FALSE]}	{b res}
+	};
+
+RULE	SetCompare.op	reg.r RegOrCMemOrIm.o		-> reg.res <eax..edx>;
+  COND { op.rel > RelUnequal };
+  COST 10;
+  SCRATCH t <eax,ebx,ecx,edx,esi,edi>;
+  EVAL	{ res.mode := UnsignedByte; }
+  EMIT  {
+.	movl	{*r},{*t}
+	CASE op.rel OF
+	| RelLess:
+.	or	{a o.am},{*t}
+	op.rel := RelUnequal;
+	| RelLessOrEqual:
+.	and	{a o.am},{*t}
+	op.rel := RelEqual;
+	| RelGreater:
+.	and	{a o.am},{*t}
+	op.rel := RelUnequal;
+	| RelGreaterOrEqual:
+.	or	{a o.am},{*t}
+	op.rel := RelEqual;
+	END;
+.	cmpl	{*t},{*r}
+.	set{s RelationTable[op.rel][FALSE]}	{b res}
+	};
+      
+ROUTINE PointerCompare
+     { FixedCompare (SignedLong, Atrel, op1, op2, result)};
+
+ROUTINE TestMembership
+     { Coerce (AtElemMode, UnsignedLong, op1, op1);
+       TestMembershipL (UnsignedLong, Atcond, op1, op2, result); };
+
+RULE	TestMembershipL.op RegOrIm.e RegOrCMem.set	-> reg <eax..edx>;
+  COST 7;
+  EVAL  { reg.mode := UnsignedByte; }
+  EMIT	{
+.	btl	{a e.am},{a set.am}
+	IF op.cond THEN
+.	setb	{b reg}
+	ELSE
+.	setnb	{b reg}
+	END;
+	};
+
+RULE	TestOdd.op	reg.r		-> reg.res;
+  COST 2;
+  TARGET r;
+  EVAL	{ res.mode := r.mode; }
+  EMIT	{
+.	and{M op.mode}	$1,{p r,op.mode}
+	IF NOT op.cond THEN
+.	xor{M op.mode}	$1,{p r,op.mode}
+	END;
+	};
+
+(* Verzweigungen -------------------------------------------------------- *)
+
+RULE	PlaceLabel.op;
+  COST 0;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.{l op.lab}:
+	};
+
+RULE	Goto.op;
+  COST 7;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	jmp	{l op.tar}
+	};
+
+RULE	SwitchL.op			reg;
+(* CASE-Verteiler *)
+  COST 12; 
+  EMIT	{
+	GetLabel (lab);
+.	.data
+.	.align 4
+.{l lab}:
+	WHILE op.CaseLabels # NIL DO
+.	.long	{l op.CaseLabels^.label}
+	  op.CaseLabels := op.CaseLabels^.next;
+	END;
+.	.text
+	CurRoundMode := RndUnknown;
+.	sub{M op.mode}	${i op.lwb},{p reg,op.mode}
+.	j{s RelationTable[RelLess][SignedTable[op.mode]]}	{l op.DefaultLabel}
+.	cmp{M op.mode}	${i op.upb - op.lwb},{p reg,op.mode}
+.	j{s RelationTable[RelGreater][SignedTable[op.mode]]}	{l op.DefaultLabel}
+.	jmp	*{l lab}(,{*reg},4)
+	};
+
+RULE	TestAndBranch.op		reg <eax,ebx,ecx,edx>;
+  COST 4;
+  EMIT	{
+	IF op.cond THEN k:=1 ELSE k:=0 END;
+	CurRoundMode := RndUnknown;
+.	cmpb	${i k},{b reg}
+.	je	{l op.tar}
+	};
+
+RULE	TestAndBranch.op		CMem;
+  COST 4;
+  EMIT	{
+	IF op.cond THEN k:=1 ELSE k:=0 END;
+	CurRoundMode := RndUnknown;
+.	cmpb	${i k},{m CMem.am}
+.	je	{l op.tar}
+	};
+
+RULE	FixedCompareAndBranch.op	reg.o1 RegOrCMemOrIm.o2;
+  COST 8;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	cmp{M op.mode}	{a o2.am},{p o1,op.mode}
+.	j{s RelationTable[op.rel][SignedTable[op.mode]]}	{l op.tar}
+	};
+
+RULE	FixedCompareAndBranch.op	CMem.o1 RegOrIm.o2;
+  COST 8;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	cmp{M op.mode}	{a o2.am},{m o1.am}
+.	j{s RelationTable[op.rel][SignedTable[op.mode]]}	{l op.tar}
+	};
+
+RULE	FixedCompareAndBranch.op	Constant.o1 RegOrCMem.o2;
+  COST 8;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	cmp{M op.mode}	${i o1.val},{a o2.am}
+.	j{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{l op.tar}
+	};
+
+RULE	FloatCompareAndBranch.op	freg <st> CMem;
+  COST 51; (* 26 + 15 + 3 + 7 *)
+  CHANGE <eax>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	fcomp{M CMem.mode}	{m CMem.am}
+.	fstsw	%ax
+.	sahf
+.	j{s RelationTable[op.rel][SignedTable[op.mode]]}	{l op.tar}
+	PopFStack;
+	}
+	
+RULE	FloatCompareAndBranch.op	CMem freg <st>;
+  COST 51; (* 26 + 15 + 3 + 7 *)
+  CHANGE <eax>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	fcomp{M CMem.mode}	{m CMem.am}
+.	fstsw	%ax
+.	sahf
+.	j{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{l op.tar}
+	PopFStack;
+	}
+	
+RULE	FloatCompareAndBranch.op	fstack freg <st>;
+  COST 51; (* 26 + 15 + 3 + 7 *)
+  CHANGE <eax>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+	INC (FStackStart);
+	IF FStackTempo[FStackStart] # NoTempo THEN
+.	fcompl	{i FStackTempo[FStackStart]}(%ebp)
+	  DEC (CurFStackSize);
+	ELSE
+.	fcompp
+	  DEC (CurFStackSize, 2);
+	END;
+.	fstsw	%ax
+.	sahf
+.	j{s RelationTable[Reverse[op.rel]][SignedTable[op.mode]]}	{l op.tar}
+	};
+
+RULE	SetCompareAndBranch.op	reg.r RegOrCMemOrIm.o;
+  COND { op.rel <= RelUnequal };
+  COST 9;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	cmpl	{a o.am},{*r}
+.	j{s RelationTable[op.rel][FALSE]}	{l op.tar}
+	};
+
+RULE	SetCompareAndBranch.op	reg.r RegOrCMemOrIm.o;
+  COND { op.rel > RelUnequal };
+  COST 11;
+  SCRATCH t <eax,ebx,ecx,edx,esi,edi>;
+  EMIT  {
+	CurRoundMode := RndUnknown;
+.	movl	{*r},{*t}
+	CASE op.rel OF
+	| RelLess:
+.	or	{a o.am},{*t}
+	op.rel := RelUnequal;
+	| RelLessOrEqual:
+.	and	{a o.am},{*t}
+	op.rel := RelEqual;
+	| RelGreater:
+.	and	{a o.am},{*t}
+	op.rel := RelUnequal;
+	| RelGreaterOrEqual:
+.	or	{a o.am},{*t}
+	op.rel := RelEqual;
+	END;
+.	cmpl	{*t},{*r}
+.	j{s RelationTable[op.rel][FALSE]}	{l op.tar}
+	};
+      
+ROUTINE PointerCompareAndBranch
+     { FixedCompareAndBranch (SignedLong, Atrel, Attar, op1, op2)};
+
+ROUTINE TestMembershipAndBranch
+     { Coerce (AtElemMode, UnsignedLong, op1, op1);
+       TestMembershipAndBranchL (UnsignedLong, Atcond, Attar, op1, op2); };
+       
+RULE	TestMembershipAndBranchL.op RegOrIm.e RegOrCMem.set;
+  COST 10;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	btl	{a e.am},{a set.am}
+	IF op.cond THEN
+.	jc	{l op.tar}
+	ELSE
+.	jnc	{l op.tar}
+	END;
+	};
+
+RULE	TestOddAndBranch.op		reg.r;
+  COST 2;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	and{M op.mode}	$1,{p r,op.mode}
+	IF NOT op.cond THEN
+.	xor{M op.mode}	$1,{p r,op.mode}
+	END;
+.	jnz	{l op.tar}
+	};
+
+
+(* Prozeduraufrufe alt -------------------------------------------------- *)
+
+ROUTINE PreCall
+     { INC(CallLevel); 
+       IF CallLevel > MaxCallLevel
+        THEN ERROR ("Compilerlimit exceeded: Backend: nesting of PROCEDURE-calls to deep!", CurPos)
+       END;
+       CurParamOffset[CallLevel] := AtParamSize + ReservedParamFrameSize;
+       ParamSize     [CallLevel] := AtParamSize;
+       callee := NIL;
+       Nil (arglist[CallLevel]); };
+
+ROUTINE PassValue
+     { IF SizeTable[Atmode] < 4 THEN
+	 IF SignedTable[Atmode] THEN
+	   Coerce (Atmode, SignedLong, op1, op1);
+	   Atmode := SignedLong;
+	 ELSE
+	   Coerce (Atmode, UnsignedLong, op1, op1);
+	   Atmode := UnsignedLong;
+	 END;
+       END;
+       Pass (Atmode, Atoffset,
+	     arglist[CallLevel], op1, arglist[CallLevel]);
+       CurParamOffset[CallLevel] := Atoffset; };
+
+ROUTINE PassLongValue
+     { PassLong (Atsize, Atoffset, CurParamOffset[CallLevel] - Atoffset, 
+		 arglist[CallLevel], op1, arglist[CallLevel]);
+       CurParamOffset[CallLevel] := Atoffset; };
+
+ROUTINE PassOpenArrayValue
+     {PassValue (SignedLong, Atoffset, op1)};
+
+ROUTINE PassStringValue
+     {PassLongValue (AtSourceLength, Atoffset, op1)};
+
+ROUTINE PassAddress
+     {PassValue (SignedLong, Atoffset, op1)};
+
+ROUTINE Call
+     { callee := op1; };
+
+ROUTINE SysCall
+     { RTSCall (ParamSize[CallLevel], Atsysproc, arglist[CallLevel]);
+       callee := NIL; };
+       
+ROUTINE FunctionResult
+     { FunctionCall (ParamSize[CallLevel], Atmode, 
+		     arglist[CallLevel], callee, result);
+       callee := NIL; };
+
+ROUTINE PostCall
+     { IF callee # NIL
+         THEN ProcedureCall (ParamSize[CallLevel], arglist[CallLevel], callee);
+       END;
+       DEC (CallLevel); };
+
+
+(* Prozeduraufrufe neu -------------------------------------------------- *)
+
+RULE Nil -> arglist;
+
+RULE	Pass.op		arglist.tail RegOrCMemOrIm.b	-> arglist.res;
+  COND	{ SizeTable[op.mode] = 4 }
+  COST 2;
+  EMIT	{
+.	pushl	{a b.am}
+	};
+
+(*
+RULE	Pass.op		arglist.tail RegOrCMem.b	-> arglist.res;
+  COND	{ SizeTable[op.mode] <= 2 }
+  COST 5;
+  SCRATCH s <eax,ebx,ecx,edx,esi,edi>;
+  EMIT	{
+.	mov{S op.mode}{M op.mode}l	{a b.am},{*s}
+.	pushl	{*s}
+	};
+*)
+
+RULE	Pass.op		arglist.tail Constant.c		-> arglist.res;
+  COST 2;
+  EMIT	{
+.	pushl	${i c.val}
+	};
+
+RULE	Pass.op		arglist.tail CMem.b		-> arglist.res;
+  COND	{ op.mode = FloatLong }
+  COST 4;
+  EMIT	{
+	INC (b.am.offset, 4);
+.	pushl	{m b.am}
+	DEC (b.am.offset, 4);
+.	pushl	{m b.am}
+	};
+
+RULE	Pass.op		arglist.tail freg <st>		-> arglist.res;
+  COND	{ op.mode >= FloatShort }
+  COST 47;
+  EMIT	{
+.	subl	${i SizeTable[op.mode]},%esp
+.	fstp{M op.mode}	(%esp)
+	PopFStack;
+	};
+
+RULE	PassLong.op	arglist.tail mem.b		-> arglist.res;
+  COND	{ op.size <= 4 }
+  COST 2;
+  EMIT	{
+	IF op.space > 4 THEN
+.	subl	${i op.space - 4},%esp
+	END;	
+.	pushl	{m b.am}
+	};
+  
+RULE	PassLong.op	arglist.tail reg <esi>		-> arglist.res;
+  COST 20;
+  CHANGE <ecx, edi>;
+  EMIT	{
+.	subl	${i op.space},%esp
+.	movl	%esp,%edi
+.	movl	${i (op.size + 3) DIV 4},%ecx
+.	cld
+.	repz
+.	movsl
+	};
+
+RULE	ProcedureCall.op	arglist reg.adr;
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	call	{*adr}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	};
+
+RULE	ProcedureCall.op	arglist ProcedureConstant.pc;
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+.	call	{l pc.index^.Entry}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	};
+
+RULE	FunctionCall.op		arglist reg.adr			-> reg <eax>;
+  COND { op.mode < FloatShort };
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EVAL	{ reg.mode := op.mode; }
+  EMIT	{
+	SpillFStack;
+	CurRoundMode := RndUnknown;
+.	call	{*adr}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	};
+
+RULE	FunctionCall.op		arglist ProcedureConstant.pc 	-> reg <eax>;
+  COND { op.mode < FloatShort };
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EVAL	{ reg.mode := op.mode; }
+  EMIT	{
+	SpillFStack;
+	CurRoundMode := RndUnknown;
+.	call	{l pc.index^.Entry}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	};
+
+RULE	FunctionCall.op		arglist reg.adr			-> freg <st>;
+  COND { op.mode >= FloatShort };
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EMIT	{
+	SpillFStack;
+	CurRoundMode := RndUnknown;
+.	call	{*adr}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	PushFStack;
+	};
+
+RULE	FunctionCall.op		arglist ProcedureConstant.pc 	-> freg <st>;
+  COND { op.mode >= FloatShort };
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EMIT	{
+	SpillFStack;
+	CurRoundMode := RndUnknown;
+.	call	{l pc.index^.Entry}
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	PushFStack;
+	};
+
+RULE	RTSCall.op		arglist;
+  COST 100;
+  CHANGE <eax, ebx, ecx, edx, esi, edi>;
+  EMIT	{
+	CurRoundMode := RndUnknown;
+	CASE op.sysproc OF 
+	      | SysProcHALT : 
+.	call	exit_
+	      | SysProcTransfer : 
+.	call	Transfer_
+	      | SysProcNewprocess : 
+.	call	NewProcess_
+	      | SysProcCaseError : 
+.	call	CaseErr_
+	      | SysProcReturnError : 
+.	call	ReturnErr_
+	END;
+	IF op.paramsize # 0 THEN 
+	(* op.paramsize := (op.paramsize+3) DIV 4 * 4; *)
+.	addl	${i op.paramsize}, %esp
+	END;
+	};
+ 
+(* MathLib - Prozeduren ------------------------------------------------- *)
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_sqrt') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_sqrtL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_sqrt') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_sqrtL') }
+  COST 5;
+  TARGET f;
+  EMIT	{.	fsqrt}
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_exp') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_expL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_exp') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_expL') }
+  COST 5;
+  TARGET f;
+  EMIT	{
+	(* e^x = 2^(x * log2e) *) 
+.	fmull	RealLog2e_
+	(* Normierung noetig: Fuer f2xm1 muss -0.5 <= st <= +0.5 gelten *)
+	(* Daher Aufteilung von x = hi + lo mit |lo| <= 0.5		*)
+	(* Neues Register fuer hi, weil x noch gebraucht wird 		*)
+	PushFStack;
+.	fld	%st
+	(* Rundung hier zur naechsten ganzen Zahl, deshalb Aenderung    *)
+	(* des Steuerwortes						*)
+	CheckRoundMode (RndNearest);
+.	frndint
+	(* Neues Register fuer lo, weil hi noch gebraucht wird 		*)
+	PushFStack;
+.	fld	%st
+	(* Differenz von x und hi -> lo					*)
+.	fsubr	%st(2),%st
+	(* Berechnung von 2^lo						*)
+.	f2xm1
+.	fadds	RealOne_
+	(* Berechnung 2^hi * 2^lo					*)
+.	fscale
+	(* Benutzte Register wieder poppen (und Ergebnis weitergeben)	*)
+.	fstp	%st(1)
+	PopFStack;
+.	fstp	%st(1)
+	PopFStack;
+	}
+
+RULE	FunctionCall.op
+	  Pass	loadln2	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_ln') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_lnL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_ln') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_lnL') }
+  COST 5;
+  TARGET f;
+  EMIT	{
+	IF CurFStackSize < 2 THEN
+	(* Es wurde RealLn2_ zwar geladen, aber dann wegen Funktionsaufrufen *)
+	(* als Tempo in den Speicher ausgelagert. Deshalb wird RealLn2_      *)
+	(* hier erneut geladen, die ersten beiden Stackregister vertauscht,  *)
+	(* und die Markierung als Tempo (die Speicherstelle) geloescht.      *)
+	(* Im Normalfall wird durch das Nichtterminalloadln2 die Konstante   *)
+	(* RealLn2_ vor (!) der Auswertung des Funktionsarguments in freg    *)
+	(* auf den Floating-Point-Stack geladen.			     *)
+.	fldl	RealLn2_
+.	fxch	%st(1)
+	FStackTempo[FStackStart+1] := NoTempo;
+	INC (CurFStackSize);
+	END;
+.	fyl2x
+	PopFStack;
+	}
+
+RULE	Nil	-> loadln2;
+  COST 2;
+  EMIT	{
+	PushFStack;
+.	fldl	RealLn2_
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_sin') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_sinL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_sin') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_sinL') }
+  COST 5;
+  TARGET f;
+  EMIT	{.	fsin}
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_cos') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_cosL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_cos') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_cosL') }
+  COST 5;
+  TARGET f;
+  EMIT	{.	fcos}
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg.f <st>
+	  ProcedureConstant.pc 		-> freg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_arctan') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_arctanL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_arctan') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_arctanL') }
+  COST 5;
+  TARGET f;
+  EMIT	{
+	PushFStack;
+.	flds	RealOne_
+.	fpatan
+	PopFStack;
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	CMem
+	  ProcedureConstant.pc 		-> freg <st>;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_real') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, '_LFLOAT') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_real') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, 'LFLOAT') }
+  COST 5;
+  EMIT	{
+	PushFStack;
+.	fildl	{m CMem.am}
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	reg
+	  ProcedureConstant.pc 		-> freg <st>;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_real') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, '_LFLOAT') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_real') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, 'LFLOAT') }
+  COST 10;
+  EMIT	{
+	PushFStack;
+.	pushl	{*reg}
+.	fildl	(%esp)
+.	addl	$4,%esp
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	Constant
+	  ProcedureConstant.pc 		-> FloatConstant;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, '_LFLOAT') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_realL') OR
+	 StrEq (pc.index^.Entry^, 'LFLOAT') }
+  EVAL	{ FloatConstant.mode := FloatLong;
+	  FloatConstant.val  := LFLOAT(Constant.val); }
+
+RULE	FunctionCall.op
+	  Pass	Nil	Constant
+	  ProcedureConstant.pc 		-> FloatConstant;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_real') OR
+         StrEq (pc.index^.Entry^, 'MathLib_real') }
+  EVAL	{ FloatConstant.mode := FloatShort;
+	  FloatConstant.val  := real(Constant.val); }
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg <st>
+	  ProcedureConstant.pc 		-> reg;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_entier') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_entierL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_entier') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_entierL') }
+  COST 10;
+  EMIT	{
+.	subl	$4,%esp
+	CheckRoundMode (RndNegInf);
+.	fistpl	(%esp)
+.	popl	{*reg}
+	PopFStack;
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	FloatConstant
+	  ProcedureConstant.pc 		-> Constant;
+  COND { (StrEq (pc.index^.Entry^, '_MathLib_entier') OR
+	  StrEq (pc.index^.Entry^, '_MathLib_entierL') OR
+	  StrEq (pc.index^.Entry^, 'MathLib_entier') OR
+	  StrEq (pc.index^.Entry^, 'MathLib_entierL')) AND
+	 (FloatConstant.val <= LFLOAT(MAX(INTEGER))) AND
+	 (FloatConstant.val >= LFLOAT(MIN(INTEGER))) }
+  EVAL	{ Constant.mode := SignedLong;
+	  Constant.val  := entierL (FloatConstant.val); }
+
+RULE	Assign
+	  mem
+	  FunctionCall.op
+	    Pass	Nil	freg <st>
+	    ProcedureConstant.pc;
+  COND { StrEq (pc.index^.Entry^, '_MathLib_entier') OR
+	 StrEq (pc.index^.Entry^, '_MathLib_entierL') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_entier') OR
+	 StrEq (pc.index^.Entry^, 'MathLib_entierL') }
+  COST 5;
+  EMIT	{
+	CheckRoundMode (RndNegInf);
+.	fistpl	{m mem.am}
+	PopFStack;
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	freg <st>
+	  ProcedureConstant.pc 		-> reg;
+  COND { StrEq (pc.index^.Entry^, '_LTRUNC') OR
+         StrEq (pc.index^.Entry^, 'LTRUNC') }
+  COST 10;
+  EMIT	{
+.	subl	$4,%esp
+	CheckRoundMode (RndZero);
+.	fistpl	(%esp)
+.	popl	{*reg}
+	PopFStack;
+	}
+
+RULE	FunctionCall.op
+	  Pass	Nil	FloatConstant
+	  ProcedureConstant.pc 		-> Constant;
+  COND { (StrEq (pc.index^.Entry^, '_LTRUNC') OR
+          StrEq (pc.index^.Entry^, 'LTRUNC')) AND
+	 (FloatConstant.val <= LFLOAT(MAX(INTEGER))) AND
+	 (FloatConstant.val >= LFLOAT(MIN(INTEGER))) }
+  EVAL	{ Constant.mode := SignedLong;
+	  Constant.val  := LTRUNC(FloatConstant.val); }
+
+RULE	Assign
+	  mem
+	  FunctionCall.op
+	    Pass	Nil	freg <st>
+	    ProcedureConstant.pc;
+  COND { StrEq (pc.index^.Entry^, '_LTRUNC') OR
+         StrEq (pc.index^.Entry^, 'LTRUNC') }
+  COST 5;
+  EMIT	{
+	CheckRoundMode (RndZero);
+.	fistpl	{m mem.am}
+	PopFStack;
+	}
+
+
+(* Prozeduren ----------------------------------------------------------- *)
+
+RULE	BeginProcedure.op;
+CHANGE	<eax..esp>;
+EMIT	{
+   UndefOperand := IR.emptyExpression;
+   CurLevel := op.level;
+   CurFrameSize := 4 * ((ABS(op.FrameSize)+3) DIV 4);
+   CurRoundMode := RndUnknown;
+   IF CurLevel > MaxDisplay THEN 
+      ERROR ('too many nested procedures', CurPos);
+      CurLevel := 0;
+   END;
+   CurFStackSize := 0;
+   FStackStart := MaxFloatTempo;
+   TransferTempo := NoTempo;
+
+(* -------------------------------------------------------------------- *)
+(* Die Daten werden bei Prozeduren wie folgt auf dem Stack abgelegt :	*)
+(*		------------------------- <--- Stackanfang (MaxAdr)	*)
+(*		|			|				*)
+(*		|	.......		|				*)
+(*		|			|				*)
+(*	    .	|-----------------------|				*)
+(*	    .	|	Parameter	|				*)
+(*	    .	| (bei OpenArrays nur	|				*)
+(*	    8	|  Adresse und Laenge)	|				*)
+(*		|-----------------------|				*)
+(*	    4	|    Return-Adresse	|				*)
+(*		|-----------------------|				*)
+(*	    0	|   alter BasePointer   | <--- BasePointer (ebp)	*)
+(*		|-----------------------|   )				*)
+(*	   -4	| alter DV [CurLevel]	|   )				*)
+(*		|-----------------------|   )				*)
+(*	   -8	| lokale Variablen	|   )  Activation Record (AR)	*)
+(*	    .	|-----------------------|   )				*)
+(*	    .	| evtl.temporaere Werte	|   )				*)
+(*	    .	|-----------------------|   )				*)
+(*		| evtl. OpenArrays	|   )				*)
+(*		|-----------------------|   )				*)
+(*		| Platz fuer Sicherungen|   )				*)
+(*		|-----------------------| <--- StackPointer (esp)	*)
+(*									*)
+(* Der DisplayVector DV enthaelt jeweils den aktuellen BP der zuletzt	*)
+(* auf dem jeweiligen Level ausgefuehrten Prozedur.			*)
+(* Der DisplayVector steht ab der Stelle DISPLAY_ im Speicher,		*)
+(* durch das sich die Adresse vom DisplayVector des Levels i, also	*)
+(* DV [i], als DISPLAY_ + i*4 errechnen laesst.				*)
+(* Aus Optimierungsgruenden wird jedoch der DV nicht in jedem Level	*)
+(* gespeichert und geladen, sondern nur, falls eine Prozedur des Levels *)
+(* i auf eine nicht-globale Variable des Levels j (j < i) zugreift.	*)
+(* -------------------------------------------------------------------- *)
+
+(* Zunaechst den Label bestimmen, an dem der die Groesse des Activation *)
+(* Records bei EndProcedure gespeichert wird. Diese kann durch die un-	*)
+(* gewisse Zahl der benoetigten temporaeren Werte erst am Schluss	*)
+(* bestimmt werden.							*)
+	GetLabel (ProcLabel);
+(* Startlabel der Prozedur eintragen *)
+.	.align 4
+.{l op.index^.Entry}:
+(* Alten BP sichern *)
+.	pushl	%ebp
+(* Neuer BP fuer neuen Activation Record *)
+.	movl	%esp,%ebp
+(* Platz fuer alten DisplayVector[CurLevel], lokale Variablen und	*)
+(* temporaere Werte schaffen.						*)
+.	subl	${l ProcLabel}, %esp
+     IF SaveDisplay [CurLevel] THEN
+(* Aktualisieren des DisplayVectors,  wird fuer andere Prozedur benoetigt. *)
+(* Laden des momentanen DisplayVectors [CurLevel] *)
+.	movl	DISPLAY_+{i 4 * CurLevel},%ecx
+(* Sichern des alten Wertes des DisplayVectors [CurLevel] *)
+.	movl	%ecx,-4(%ebp)
+(* Schreiben des aktuellen DisplayVectors [CurLevel] *)
+.	movl	%ebp,DISPLAY_+{i 4 * CurLevel}
+     END;
+
+(* !!!!!!!!!! Registersicherung bei Funktionsaufrufen !!!!!!!!!!
+   Linux/BSD: edi, esi, ebx werden in aufgerufener Funktion gesichert,
+	      ecx, edx werden in aufrufender Funktion gesichert,
+	      eax oder st behinhaltet den Rueckgabewert
+   MOCKA:     edi, esi, ebx, ecx, edx werden in aufrufender Funktion gesichert,
+	      eax oder st behinhaltet den Rueckgabewert
+   Dieser Unterschied ist unwesentlich bei Aufruf von C-Funktionen
+   (z.B. libc) aus MOCKA-Programmen. Im umgekehrten Fall (Aufruf von MOCKA-
+   Funktionen von C aus, z.B. von atexit-Funktionen) fuehrt dies zu Fehlern.
+   Abhilfe: Die CcallsMocka Option
+   Diese sichert immer edi, esi, ebx, egal ob sie veraendert werden oder
+   nicht (was genau geaendert wird, weiss man bei einem 1-Pass Compiler
+   leider nicht). Dies ist im Normalfall ueberfluessig, und sollte daher
+   aus Performancegruenden auf die Funktionen beschraenkt werden, die
+   von C aus aufgerufen werden.						*)
+     IF Enabled (oCCall) THEN
+.	pushl %edi
+.	pushl %esi
+.	pushl %ebx
+     END;
+
+     IF Kommentar THEN
+.	/* --------------------------------------------------------- */
+.	/* Level : {i CurLevel} */
+.	/* --------------------------------------------------------- */
+     END;
+	}
+
+RULE	CopyOpenArray.cp;
+  COST 20; 
+  CHANGE <ecx,esi,edi>;
+  EMIT	{
+	IF Kommentar THEN
+.	/* Copy Open Array Begin */
+	END;
+   IF (cp.elemsize # ByteSize) & ODD (cp.elemsize) THEN INC (cp.elemsize); END;
+   (* Lade letzten Index (= Laenge - 1) des Stringparameter *)
+.	movl	{i cp.HighOffset}(%ebp),%ecx
+   (* Bestimme Laenge des Stringparameters *)
+.	incl	%ecx
+   (* Ermittle Platzbedarf fuer den Stringparameter.			*)
+   (* Das Resultat steht in Register ecx.				*)
+      IF cp.elemsize # ByteSize THEN
+      (* Multiplikation Elementanzahl * Elementgroesse = Platzbedarf	*)
+      (* durchfuehren.							*)
+	 IF IsPowerOfTwo (cp.elemsize) THEN
+.	shll	${i Log2 (cp.elemsize)}, %ecx
+	 ELSE
+.	imull	${i cp.elemsize},%ecx
+	 END
+      END;
+   (* Platzbedarf auf durch 4 teilbare Adresse aufrunden *)
+.	addl	$3,%ecx
+.	andl	$0xfffffffc, %ecx
+   (* Schaffe auf dem Stack entsprechenden Platz *)
+.	subl 	%ecx,%esp
+   (* Startadresse des zu kopierenden ARRAYs				*)
+.	movl	%esp,%edi
+   (* Lade Startadresse des OpenArrays *)
+.	movl	{i cp.DataOffset}(%ebp),%esi
+    (* Ersetze im Parameterteil der Prozedur die Startadresse des Parameter-
+       strings durch die Adresse dessen Kopie auf das OpenArray         *)
+.	movl	%edi,{i cp.DataOffset}(%ebp)
+     (* Kopiere Stringparameter in den OpenArray-Platz der Prozedur     *)
+     (* Register ecx enthaelt die Groesse				*)
+     (* Register esi die Quelladresse,					*)
+     (* Register edi die Zieladresse.					*)
+.	shrl	$2,%ecx
+.	cld
+.	repz
+.	movsl
+	IF Kommentar THEN
+.	/* Copy Open Array End */
+	END;
+	};
+
+RULE	Return.re;
+  COST 20;
+  CHANGE <eax..esp>;
+  EMIT	{ 
+	IF (CurFStackSize <> 0) AND OK THEN
+.	ERROR: CurFStackSize <> 0
+	AssClose;
+	CompilerError ("Something's going wrong in fp expression");
+	END;	
+	CurRoundMode := RndUnknown;
+	IF SaveDisplay [CurLevel] THEN
+	(* Alten Wert von DisplayVector [CurLevel] laden, wurde veraendert *)
+.	movl	-4(%ebp),%ecx
+	(* Diesen Wert wieder in DisplayVector [CurLevel] eintragen *)
+.	movl	%ecx,DISPLAY_+{i 4 * CurLevel}
+	END;
+	(* Bei Aufruf von MOCKA Prozeduren von C Programmen 
+	   (z.B. atexitHandler) muessen diese in BeginProcedure
+	   gesicherten Register wiederhergestellt werden. *)
+	IF Enabled (oCCall) THEN
+.	popl %ebx
+.	popl %esi
+.	popl %edi
+	END;
+	(* Ruecksprung aus der Prozedur *)
+.	leave
+.	ret
+	};
+
+ROUTINE ReturnValue
+     {ReturnValueL (Atmode, op1);
+      Return (AtParamSize);};
+
+RULE	ReturnValueL	reg <eax>;
+  COND	{ ReturnValueL.mode < FloatShort };
+    
+RULE	ReturnValueL	freg <st>;
+  COND	{ ReturnValueL.mode >= FloatShort };
+  EMIT	{
+	PopFStack;
+	}
+    
+RULE	EndProcedure;
+EMIT	{
+	SaveDisplay [CurLevel] := FALSE; 
+	CurFrameSize :=   4 * ((ABS(CurFrameSize)+3) DIV 4);
+.	{l ProcLabel} = {i CurFrameSize}
+	}
+
+
+(* Module --------------------------------------------------------------- *)
+
+RULE	EndModule;
+EMIT	{
+   AssClose;
+   IF OK (* no Errors *) THEN 
+      StringAssign  (cmd, 'cd '); 
+      StringAppend2 (cmd, LibraryDirectory, '; ');
+      StringAppend1 (cmd, AssemblerScript);
+      IF Enabled (ElfOption) THEN
+	 StringAppend1 (cmd,' -elf');
+      END;
+      IF Enabled (DebugOption) THEN
+	 StringAppend1 (cmd,' -g');
+      END;
+      StringAppend2 (cmd, ' ', ModName); 
+      SystemCommand (cmd,ok);
+      IF NOT ok THEN 
+	 WriteString ("Assembler terminated with error"); WriteLn;
+	 exit (1);
+      END;
+   END;
+   IF NOT Enabled (oAssemblerListing) THEN
+      Erase (AsmListFileName,ok);
+   END;
+	}
+
+
+RULE	Mark;
+  EMIT	{ CurPos.line := Mark.line; CurPos.col := Mark.col; }
+
+
+INSERTS
+
+(* IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII *)
+
+IpTypes    {
+IMPORT CgBase;
+FROM Strings	IMPORT	String;
+}
+
+IpGcgTypes {
+ MemAdr      = RECORD
+		  offset, faktor: LONGINT;
+		  base, index: Register;
+		  symbol: CgBase.RelSymb;
+	       END;
+ AdrModeMode = (Mconst, Mreg, Mmem);
+ AdrMode     = RECORD
+	          mode : CgBase.Mode;
+		  CASE kind : AdrModeMode OF
+		    Mconst : constant : LONGINT;
+		  | Mreg   : reg      : Register;
+		  | Mmem   : mem      : MemAdr;
+		  END
+	       END;
+}
+
+IpNtTypes {
+FROM IR	IMPORT	MemAdr, AdrMode, AdrModeMode;
+}
+
+IpIRConsStorage	{
+FROM GcgStorage IMPORT ALLOCATE;
+}
+
+IpIRCons   {    
+
+(***************************************************************************)
+(* Attribute Types                                                         *)
+(***************************************************************************)
+
+TYPE
+
+   Operand            = ADDRESS;
+   DataOperand        = ADDRESS;
+   AddressOperand     = ADDRESS;
+   DataTempo          = CgBase.DataTempo;
+   AddressTempo       = CgBase.AddressTempo;
+   ModuleIndex        = CgBase.ModuleIndex;
+   ProcIndex          = CgBase.ProcIndex;
+   StringIndex        = CgBase.StringIndex;
+   Label              = CgBase.Label;
+   SysProc            = CgBase.SysProc;
+   Mode               = CgBase.Mode;
+   Relation           = CgBase.Relation;
+
+CONST
+
+   SysProcHALT        = CgBase.SysProcHALT;
+   SysProcNewprocess  = CgBase.SysProcNewprocess;
+   SysProcTransfer    = CgBase.SysProcTransfer;
+   SysProcCaseError   = CgBase.SysProcCaseError;
+   SysProcReturnError = CgBase.SysProcReturnError;
+
+   UnsignedByte       = CgBase.UnsignedByte;
+   UnsignedWord       = CgBase.UnsignedWord;
+   UnsignedLong       = CgBase.UnsignedLong;
+   SignedByte         = CgBase.SignedByte;
+   SignedWord         = CgBase.SignedWord;
+   SignedLong         = CgBase.SignedLong;
+   FloatShort         = CgBase.FloatShort;
+   FloatLong          = CgBase.FloatLong;
+
+   RelEqual           = CgBase.RelEqual;
+   RelUnequal         = CgBase.RelUnequal;
+   RelLess            = CgBase.RelLess;
+   RelLessOrEqual     = CgBase.RelLessOrEqual;
+   RelGreater         = CgBase.RelGreater;
+   RelGreaterOrEqual  = CgBase.RelGreaterOrEqual;
+
+
+(***************************************************************************)
+(* Values for undefined attributes  and operands                           *)
+(***************************************************************************)
+
+VAR
+   UndefProcIndex   : ProcIndex;
+   UndefModuleIndex : ModuleIndex;
+   UndefOperand     : Operand;
+
+
+(***************************************************************************)
+(* Declarations                                                            *)
+(***************************************************************************)
+
+PROCEDURE DeclareModule
+   (    extern       : BOOLEAN;
+    VAR CompUnitName : ARRAY OF CHAR; 
+    VAR ref          : ModuleIndex);
+
+PROCEDURE DeclareProcedure
+   (    extern       : BOOLEAN;
+	isFunction   : BOOLEAN;
+	ProcMode     : Mode;
+    VAR ProcName     : ARRAY OF CHAR; 
+        ProcNumber   : SHORTCARD;
+        module       : ModuleIndex;
+	level        : SHORTCARD;
+	father       : ProcIndex;
+    VAR ref          : ProcIndex);
+
+PROCEDURE DeclareString
+   (    length : SHORTCARD;
+    VAR string : ARRAY OF CHAR; 
+    VAR ref    : StringIndex);
+
+PROCEDURE DeclareLabel
+   (VAR lab : Label);
+
+PROCEDURE DeclareDataTempo
+   (    mode  : Mode;
+    VAR tempo : CgBase.DataTempo);
+
+PROCEDURE DeclareAddressTempo
+   (VAR tempo : CgBase.AddressTempo);
+
+PROCEDURE Switch
+   (mode         : Mode;
+    lwb          : LONGINT;
+    upb          : LONGINT;
+    CaseLabels   : ARRAY OF CgBase.Label;
+    DefaultLabel : CgBase.Label;
+    op           : Operand);
+
+PROCEDURE  BeginModule
+   (AtModulName  :  ARRAY OF CHAR;
+    AtFrameSize  :  LONGINT);
+}
+
+(* IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII *)
+
+IpCgMobil_i  {
+FROM LREAL		IMPORT	LTRUNC, LFLOAT;
+FROM MathLib		IMPORT	real, entierL;
+FROM Strings		IMPORT	StrEq;
+FROM SuErrors		IMPORT	ERROR;
+FROM CgBase		IMPORT	GetLabel;
+FROM CgTypeMap		IMPORT	ReservedParamFrameSize;
+FROM CgUtilities	IMPORT	IsPowerOfTwo, Log2;
+FROM Emit		IMPORT	SizeTable, SignedTable, NullSymb, DisplaySym,
+				CurLevel, CallLevel, MaxCallLevel, CurPos,
+				IsNilMemAdr;
+FROM GcgStorage		IMPORT	InitGcgStorage;
+
+CONST	FloatMaxCardinal = 4294967295.0;
+	
+VAR     optemp : Operand;	(* Temporaries for CONDITIONS etc. *)
+
+VAR	ParamSize	: ARRAY [1..MaxCallLevel] OF LONGINT;
+	CurParamOffset  : ARRAY [1..MaxCallLevel] OF LONGINT;
+	arglist		: ARRAY [1..MaxCallLevel] OF Arglist;
+	callee		: Address;
+	r		: REAL;
+
+PROCEDURE EqualMemAdr (a,b: MemAdr) : BOOLEAN;
+BEGIN
+  RETURN (a.offset = b.offset) AND
+	 (a.faktor = b.faktor) AND
+	 (a.base = b.base) AND
+	 (a.index = b.index) AND
+	 (a.symbol = b.symbol)
+END EqualMemAdr;
+
+PROCEDURE DeclareModule
+   (    extern       : BOOLEAN;
+    VAR CompUnitName : ARRAY OF CHAR; 
+    VAR ref          : ModuleIndex);
+BEGIN
+   Emit.DeclareModule (extern, CompUnitName, ref);
+END DeclareModule;
+
+
+PROCEDURE DeclareProcedure
+   (    extern       : BOOLEAN;
+	isFunction   : BOOLEAN;
+	ProcMode     : Mode;
+    VAR ProcName     : ARRAY OF CHAR; 
+        ProcNumber   : SHORTCARD;
+        module       : ModuleIndex;
+	level        : SHORTCARD;
+	father       : ProcIndex;
+    VAR ref          : ProcIndex);
+BEGIN
+  Emit.DeclareProcedure (extern, isFunction, ProcMode,
+			 ProcName, ProcNumber, module, level, father, ref);
+END DeclareProcedure;
+
+
+PROCEDURE DeclareString
+   (    length : SHORTCARD;
+    VAR string : ARRAY OF CHAR; 
+    VAR ref    : StringIndex);
+BEGIN
+  Emit.DeclareString (length, string, ref);
+END DeclareString;
+
+
+PROCEDURE DeclareLabel (VAR lab : CgBase.Label);
+BEGIN
+  GetLabel (lab);
+END DeclareLabel;
+
+
+PROCEDURE DeclareDataTempo (mode: CgBase.Mode; VAR tempo: CgBase.Tempo);
+BEGIN
+  Emit.DeclareTempo (mode, tempo);
+END DeclareDataTempo;
+
+  
+PROCEDURE DeclareAddressTempo (VAR tempo: CgBase.Tempo);
+BEGIN
+  Emit.DeclareTempo (SignedLong, tempo);
+END DeclareAddressTempo;
+ 
+
+PROCEDURE Switch
+   (mode         : Mode;
+    lwb          : LONGINT;
+    upb          : LONGINT;
+    CaseLabels   : ARRAY OF CgBase.Label;
+    DefaultLabel : CgBase.Label;
+    op           : Operand);
+(* Zunaechst wird die Label-Liste <CaseLabels> von der ARRAY-Struktur	*)
+(* des Front-Ends in eine verkettete Liste <LabelList> umgespeichert.	*)
+VAR   l,ll,l1 : CgBase.LabelList;
+      i       : LONGINT;
+BEGIN
+   NEW (l); ll:=l;
+   l^.label := CaseLabels[0];
+   FOR i:=1 TO upb - lwb DO 
+      NEW (l1); ll^.next := l1; ll :=l1;
+      l1^.label := CaseLabels[i];
+   END;
+   ll^.next := NIL;
+   Coerce (mode, UnsignedLong, op, op);
+   SwitchL (UnsignedLong, lwb, upb, l, DefaultLabel, op);
+END Switch;
+
+PROCEDURE  BeginModule
+   (AtModulName  :  ARRAY OF CHAR;
+    AtFrameSize  :  LONGINT);
+BEGIN
+   InitGcgStorage;
+   FirstAttr := NIL; MemExtend;
+   Emit.BeginModule (AtModulName, AtFrameSize);
+END BeginModule;
+}
+
+(* IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII *)
+IpEmit_d {
+FROM SuErrors IMPORT SourcePosition;
+FROM IR IMPORT MemAdr;
+
+CONST	MaxCallLevel	= 32;		(* Max. # nested procedurecalls	    *)
+
+VAR
+    SizeTable     : ARRAY CgBase.Mode OF SHORTINT;
+                            (* maps Mode to OpSize                         *)
+
+    SuffixTable   : ARRAY CgBase.Mode OF CHAR;
+			    (* maps Mode into suffix of load instruction   *)
+
+    SignedTable   : ARRAY CgBase.Mode OF BOOLEAN;
+                            (* calculates wether Mode is signed            *)
+
+    NullSymb		: CgBase.RelSymb;
+    DisplaySym		: CgBase.RelSymb;
+    
+    CurPos		: SourcePosition;
+    CurLevel		: SHORTCARD;
+    CallLevel		: SHORTCARD;
+    
+PROCEDURE DeclareModule
+   (    extern       : BOOLEAN;
+    VAR CompUnitName : ARRAY OF CHAR; 
+    VAR ref          : CgBase.ModuleIndex);
+
+PROCEDURE DeclareProcedure
+   (    extern       : BOOLEAN;
+	isFunction   : BOOLEAN;
+	ProcMode     : CgBase.Mode;
+    VAR ProcName     : ARRAY OF CHAR; 
+        ProcNumber   : SHORTCARD;
+        module       : CgBase.ModuleIndex;
+	level        : SHORTCARD;
+	father       : CgBase.ProcIndex;
+    VAR ref          : CgBase.ProcIndex);
+
+PROCEDURE DeclareString
+   (    length : SHORTCARD;
+    VAR string : ARRAY OF CHAR; 
+    VAR ref    : CgBase.StringIndex);
+
+PROCEDURE DeclareTempo
+   (    mode: CgBase.Mode;
+    VAR tempo: CgBase.Tempo);
+
+PROCEDURE  BeginModule
+   (AtModulName  :  ARRAY OF CHAR;
+    AtFrameSize  :  LONGINT);
+
+PROCEDURE IsNilMemAdr (a: MemAdr) : BOOLEAN;
+
+}
+
+IpEmit_i {
+FROM	SysLib		IMPORT	exit;
+FROM	BasicIO		IMPORT	Erase;
+FROM	SuBase		IMPORT	BuildLibraryFileName, KindAssemblerSourceFile,
+				FileName, AssemblerScript, LibraryDirectory,
+				DefineOption, Enabled, DebugOption,
+				SystemCommand;
+FROM	SuErrors	IMPORT	ERROR, CompilerError, UndefSourcePos, OK;
+FROM	GcgStorage	IMPORT	ALLOCATE;
+FROM	CgBase		IMPORT	Tempo, Mode, SysProc, Relation, MakeRelSymb,
+				GetLabel, ElfOption, InitCgBase;
+FROM	CgTypeMap	IMPORT	ByteSize, WordSize, LongSize,
+				SizeREAL, SizeLONGREAL,
+				CprocNumber, CompUnitProcNumber;
+FROM	CgMobil		IMPORT	UndefOperand;
+FROM	CgUtilities	IMPORT	StringAssign, StringLength,
+				StringAppend1, StringAppend2, StringConcat2, 
+				ConvertLONGINTtoString, ConvertREALtoString,
+				IsPowerOfTwo, Log2;
+FROM	CgAssOut	IMPORT	AssInt, AssLn, AssChar, AssString, AssHString,
+				AssOpen, AssClose;
+
+(* Control lines for the dottool: *)
+..* AssRegister(%)
+..p AssRegister2 (%)
+..w AssWordRegister (%)
+..b AssByteRegister (%)
+..i AssInt (%)
+..c AssChar (%)
+..s AssString(%)
+..$ AssLn
+..% AssHString('%')
+..m AssMemAdr(%)
+..M AssSuffix(%)
+..S AssSigned(%)
+..a AssAdrMode(%)
+..l AssString(%^)
+
+
+TYPE	RoundMode	 = (RndNearest, RndZero, RndInf, RndNegInf, RndUnknown);
+
+CONST	MaxDisplay	 = 15;		(* Max. nesting Level of procedures *)
+	MaxFloatTempo	 = 64;		(* Max. size of Float-Stack	    *)
+	MaxPowerTable	 = 31;
+	NoTempo		 = 1111111111;
+	Kommentar	 = FALSE;	(* Kommentare ein/aus		    *)
+
+VAR
+    RelationTable    : ARRAY CgBase.Relation OF
+			 ARRAY [FALSE..TRUE] OF ARRAY [0..2] OF CHAR;
+			   (* maps Relation into e,ne,g,ge,l,le,a,ae,b,be  *)
+
+    Reverse	     : ARRAY CgBase.Relation OF CgBase.Relation;
+			   (* maps Relation into reverse Relation	   *)
+    
+    PowerTable       : ARRAY [0 .. MaxPowerTable] OF LONGINT;
+                           (* powers of two, 1 <= 2^n <= 2^MaxPowerTable   *)
+
+    WordReg, ByteReg : ARRAY Register OF ARRAY [0..4] OF CHAR;
+			   (* maps to register parts                       *)
+
+    SaveDisplay	     : ARRAY [0 .. MaxDisplay] OF BOOLEAN;
+                           (* SaveDisplay [i] = TRUE <==> save display of  *)
+                           (* current procedure level                      *)
+
+    FStackTempo	     : ARRAY [0 .. MaxFloatTempo-1] OF CgBase.Tempo;
+			   (* temporaries if FloatingPoint-Stack overflows *)
+
+    TransferTempo    : CgBase.Tempo;
+			   (* temporary for reg <-> freg transfers *)
+			  
+    oEmitIR, oEmitMatch, oRegAlloc, oAssemblerListing, oCCall : CARDINAL;
+
+    AsmListFileName	: FileName;
+    ModName		: ARRAY [0..80] OF CHAR;
+
+    CurFrameSize	: LONGINT;
+    CurRoundMode	: RoundMode;
+
+    CurFStackSize	: INTEGER;
+    FStackStart		: INTEGER;
+	
+    ProcLabel		: CgBase.Label;
+
+(* local Variables for Emit-Routines *)
+VAR   
+	lab, lab2	: CgBase.Label;
+	i,j             : LONGINT;
+	k		: SHORTCARD;
+	str, cmd        : ARRAY [0..255] OF CHAR;
+	ok		: BOOLEAN;	
+	tr1		: RECORD 
+			    CASE : BOOLEAN OF
+			    | TRUE : r : REAL;
+			    | FALSE : c : LONGINT;
+			    END;
+			  END;
+	tr2		: RECORD 
+			    CASE : BOOLEAN OF
+			    | TRUE : r : LONGREAL;
+			    | FALSE : c2, c1 : LONGINT;
+			    END;
+			  END;
+
+
+PROCEDURE   LR  (to, from : Register);
+(*  Copy Register from into Register to *)
+BEGIN
+. 	movl	{*from}, {*to}
+	IF Kommentar THEN
+.					/* LR */
+	END;
+END LR;
+
+PROCEDURE   Spill (reg : Register; loc : Spilllocation);
+BEGIN
+  IF (reg # Regst) AND (reg # Regst1) THEN
+.	pushl	{*reg}
+	IF Kommentar THEN
+.					/* Spill */
+	END;
+  ELSE
+	IF Kommentar THEN
+. 					/* Spill {*reg} */
+	END;
+  END;
+END Spill;
+
+PROCEDURE   Restore (reg : Register; loc : Spilllocation);
+BEGIN
+  IF (reg # Regst) AND (reg # Regst1) THEN
+.	popl	{*reg}
+	IF Kommentar THEN
+.					/* Restore */
+	END;
+  ELSE
+	IF Kommentar THEN
+. 					/* Restore {*reg} */
+	END;
+  END;
+END Restore;
+
+
+PROCEDURE SpillFStack;
+  VAR i : INTEGER;
+BEGIN
+  FOR i:=0 TO CurFStackSize - 1 DO
+    DeclareTempo (FloatLong, FStackTempo[FStackStart + i]);
+.	fstpl	{i FStackTempo[FStackStart + i]}(%ebp)
+    IF Kommentar THEN
+.					/* SpillFstack */
+    END;
+  END;
+  CurFStackSize := 0;
+END SpillFStack;
+
+PROCEDURE PushFStack;
+(* Ueberpruefung auf Floating-Point-Stack Ueberlauf *)
+(* wird vor jedem push auf den 387 Stack aufgerufen *)
+BEGIN
+  IF CurFStackSize = 8 THEN
+    (* tiefstes Stackelement als Tempo in den Speicher legen *)
+    DeclareTempo (FloatLong, FStackTempo[FStackStart + 7]);
+.	fxch	%st(7)
+.	fstl	{i FStackTempo[FStackStart + 7]}(%ebp)
+.	fxch	%st(7)
+.	ffree	%st(7)
+  ELSE
+    INC (CurFStackSize);
+  END;
+  DEC (FStackStart);
+  FStackTempo[FStackStart] := NoTempo;
+END PushFStack;
+
+PROCEDURE PopFStack;
+(* wird nach jedem pop auf den 387 Stack aufgerufen *)
+BEGIN
+  INC (FStackStart);
+  DEC (CurFStackSize);
+END PopFStack;
+
+PROCEDURE FloatOperation (VAR op: ARRAY OF CHAR);
+BEGIN
+  INC (FStackStart);
+  IF FStackTempo[FStackStart] # NoTempo THEN
+.	{s op}l	{i FStackTempo[FStackStart]}(%ebp)
+    FStackTempo[FStackStart] := NoTempo;
+  ELSE
+.	{s op}p	%st,%st(1)
+    DEC (CurFStackSize);
+  END;
+END FloatOperation;
+
+PROCEDURE CheckRoundMode (newmode: RoundMode);
+BEGIN
+  IF CurRoundMode <> newmode THEN
+    CASE newmode OF
+    | RndNearest:
+.	fldcw	fpucw_round_to_nearest
+    | RndZero:
+.	fldcw	fpucw_round_to_zero
+    | RndInf:
+.	fldcw	fpucw_round_to_inf
+    | RndNegInf:
+.	fldcw	fpucw_round_to_neginf
+    ELSE
+      CompilerError ("Unknown Round Mode");
+    END;
+    CurRoundMode := newmode;
+  END;
+END CheckRoundMode;
+
+PROCEDURE CheckRoundMode2 (newmode1, newmode2: RoundMode);
+BEGIN
+  IF (CurRoundMode <> newmode1) AND (CurRoundMode <> newmode2) THEN
+    CheckRoundMode (newmode1);
+  END;
+END CheckRoundMode2;
+
+
+PROCEDURE IsNilMemAdr (a: MemAdr) : BOOLEAN;
+BEGIN
+  RETURN (a.offset = 0) AND
+	 (a.faktor = 0) AND
+	 (a.base = RegNil) AND
+	 (a.symbol = NullSymb)
+END IsNilMemAdr;
+
+PROCEDURE EmitIndex (VAR base : MemAdr; index : MemAdr; reg : Register);
+BEGIN
+  IF NOT IsNilMemAdr (index)
+   THEN base.index := reg;
+.	movl	{m index},{*reg}
+  END (* IF *);
+END EmitIndex;
+
+
+PROCEDURE AssRegister (r : Register);
+BEGIN
+   AssChar ('%');
+   IF r # Regst1
+     THEN AssString (IR.RegNameTable[r]);
+     ELSE AssString ('st(1)');
+   END;
+END AssRegister;
+
+PROCEDURE AssRegister2 (r : Register; mode: CgBase.Mode);
+BEGIN
+  CASE SizeTable[mode] OF
+  | 1: AssString (ByteReg[r]);
+  | 2: AssString (WordReg[r]);
+  | 4,8: AssChar ('%'); AssString (IR.RegNameTable[r]);
+    ELSE CompilerError ('Backend: Unknown Register Size');
+  END;
+END AssRegister2;
+
+PROCEDURE AssWordRegister (r : Register);
+BEGIN
+   AssString (WordReg[r])
+END AssWordRegister;
+
+PROCEDURE AssByteRegister (r : Register);
+BEGIN
+   AssString (ByteReg[r])
+END AssByteRegister;
+
+PROCEDURE AssPlusInt  (i : LONGINT);
+BEGIN
+   IF i>=0 THEN
+      AssString (' + ')
+   ELSE
+      AssString (' - ')
+   END;
+   AssInt (ABS (i));
+END AssPlusInt;
+
+PROCEDURE AssMemAdr (am: MemAdr);
+BEGIN
+  WITH am DO
+    IF symbol # NullSymb
+      THEN AssString (symbol^);
+	   IF offset # 0
+	     THEN AssPlusInt (offset)
+	   END;
+      ELSE IF offset # 0
+	     THEN AssInt (offset)
+	   END;
+    END;
+    IF (base > RegNil) OR ((index > RegNil) AND (faktor > 0))
+      THEN IF (base = RegNil) AND (faktor = 1)
+	     THEN base := index;
+		  faktor := 0;
+	   END; (* IF *)
+	   AssChar ('(');
+	   IF (base > RegNil)
+	     THEN AssRegister(base);
+	   END;
+	   IF (index > RegNil) AND (faktor > 0)
+	     THEN AssChar (',');
+		  AssRegister (index);
+		  AssChar (',');
+		  AssInt (faktor);
+	   END;
+	   AssChar (')');
+    END;
+  END;
+END AssMemAdr;
+
+PROCEDURE AssAdrMode (am: AdrMode);
+BEGIN
+  WITH am DO
+    CASE kind OF
+    | Mconst : AssChar ('$'); AssInt (constant);
+    | Mreg   : AssRegister2 (reg,mode);
+    | Mmem   : AssMemAdr (mem);
+    END;
+  END;
+END AssAdrMode;
+
+PROCEDURE AssSuffix (s: CgBase.Mode);
+BEGIN
+  AssChar (SuffixTable[s]);
+END AssSuffix;
+
+PROCEDURE AssSigned (s: CgBase.Mode);
+BEGIN
+  IF SignedTable[s]
+    THEN AssChar ('s')
+    ELSE AssChar ('z')
+  END;
+END AssSigned;
+
+
+PROCEDURE DeclareModule
+   (    extern       : BOOLEAN;
+    VAR CompUnitName : ARRAY OF CHAR; 
+    VAR ref          : CgBase.ModuleIndex);
+  VAR str : String;
+BEGIN
+   NEW (ref);
+   WITH ref^ DO
+     Extern := extern;
+     IF Enabled (ElfOption) THEN
+       Name := MakeRelSymb (CompUnitName);
+       StringAssign (str, CompUnitName);
+       StringAppend1 (str, '_s');
+     ELSE
+       StringAssign (str,'_');
+       StringAppend1 (str, CompUnitName);      
+       Name := MakeRelSymb (str);
+       StringAppend1 (str,'_s');
+     END;
+     Statics := MakeRelSymb (str);
+   END;
+END DeclareModule;
+
+
+PROCEDURE DeclareProcedure
+   (    extern       : BOOLEAN;
+	isFunction   : BOOLEAN;
+	ProcMode     : CgBase.Mode;
+    VAR ProcName     : ARRAY OF CHAR; 
+        ProcNumber   : SHORTCARD;
+        module       : CgBase.ModuleIndex;
+	level        : SHORTCARD;
+	father       : CgBase.ProcIndex;
+    VAR ref          : CgBase.ProcIndex);
+  VAR s,t : String;
+BEGIN
+  NEW (ref);
+  WITH ref^ DO 
+     Extern := extern; IsFunction := isFunction;
+     Name := MakeRelSymb (ProcName); Number := ProcNumber;
+     Module := module; Level := level; Father := father;
+
+     IF ProcNumber # CprocNumber THEN 
+
+ 	IF level = 0 THEN 
+	   StringAssign (t,module^.Name^);
+	ELSE
+	   StringAssign (t,father^.Entry^);
+	END;
+
+        IF StringLength(t)+1+StringLength(ProcName)>=80 THEN 
+	   (* Produce Name and Number   *)
+	   ConvertLONGINTtoString (ProcNumber,s);
+	   StringAssign (t,module^.Name^);
+	   StringAppend1(t,'_');
+	   StringAppend1(t,ProcName);
+	   StringAppend1(t,'_');
+	   StringAppend1(t,s);                  
+	ELSE
+	   IF ProcNumber # CompUnitProcNumber
+	     THEN StringAppend2 (t,'_',ProcName);
+	   END;
+	END;
+	Entry := MakeRelSymb (t);
+     ELSE (* ProcNumber = CprocNumber *)
+	IF Enabled (ElfOption) THEN
+	  Entry := MakeRelSymb (ProcName);
+	ELSE
+	  StringConcat2 (t,'_',ProcName);
+	  Entry := MakeRelSymb (t);
+	END;
+     END;
+.	.globl	{l Entry}
+  END;
+END DeclareProcedure;
+
+
+PROCEDURE DeclareString
+   (    length : SHORTCARD;
+    VAR string : ARRAY OF CHAR; 
+    VAR ref    : CgBase.StringIndex);
+  VAR l   : CARDINAL;
+      c   : CHAR;
+      numbersNeedRestart: BOOLEAN;
+BEGIN
+   numbersNeedRestart:=FALSE;
+   GetLabel (ref);
+.	.data
+.{l ref}:
+. 	.ascii	\"-
+   FOR l := 0 TO length - 1 DO
+      c := string[l];
+      IF numbersNeedRestart AND ('0'<=c) AND (c<='9') THEN	(* Restart *)
+.\"
+.	.ascii	\"-
+      END;
+      IF (' ' <= c) AND (c <= 'z') AND (c # 42C) AND (c # '\') THEN 
+	 AssChar (c);
+         numbersNeedRestart:=FALSE;
+      ELSE
+	 IF l < length - 1 THEN
+	    AssChar ('\');
+.{i ORD (c) DIV 64}{i (ORD (c) MOD 64) DIV 8}{i ORD (c) MOD 8}-
+	 END;
+         numbersNeedRestart:=TRUE;
+      END;
+   END;
+   AssString ('\000"'); AssLn;
+.	.text
+END DeclareString;
+
+
+PROCEDURE DeclareTempo (mode: CgBase.Mode; VAR tempo: CgBase.Tempo);
+BEGIN
+  IF mode = FloatLong
+    THEN INC(CurFrameSize, 8);
+    ELSE INC(CurFrameSize, 4);
+  END;
+  tempo := -CurFrameSize;
+END DeclareTempo;
+
+PROCEDURE DeclareTransferTempo;
+BEGIN
+  IF TransferTempo = NoTempo
+    THEN DeclareTempo (FloatShort, TransferTempo);
+  END;
+END DeclareTransferTempo;
+
+PROCEDURE  BeginModule
+   (AtModulName  :  ARRAY OF CHAR;
+    AtFrameSize  :  LONGINT);
+BEGIN
+   CallLevel := 0;
+   CurPos.line := 0;
+   CurPos.col := 0;
+
+   DisplaySym := MakeRelSymb ('DISPLAY_');
+
+   FOR i := 0 TO MaxDisplay DO SaveDisplay [i] := FALSE; END;
+
+   IR.OptEmitIR		:= Enabled (oEmitIR);
+   IR.OptEmitMatch	:= Enabled (oEmitMatch);
+   IR.OptRegAlloc	:= Enabled (oRegAlloc);
+
+   BuildLibraryFileName (AtModulName,
+			 KindAssemblerSourceFile, AsmListFileName);
+   AssOpen (AsmListFileName);
+   StringAssign (ModName, AtModulName);
+
+   InitCgBase;
+
+   IF AtFrameSize > 0 THEN
+     AssHString('	.comm ');
+     IF NOT Enabled(ElfOption) THEN
+       AssChar ('_')
+     END;
+     AssString( AtModulName);
+     AssHString('_s, ');
+     AssInt ( 4 * ((ABS(AtFrameSize)+3) DIV 4)); AssLn;
+   END;
+ AssHString('	.text'); AssLn;
+END BeginModule;
+}
+
+
+IpEmitInit {
+    SizeTable [UnsignedByte] := ByteSize;
+    SizeTable [UnsignedWord] := WordSize;
+    SizeTable [UnsignedLong] := LongSize;
+    SizeTable [SignedByte]   := ByteSize;
+    SizeTable [SignedWord]   := WordSize;
+    SizeTable [SignedLong]   := LongSize;
+    SizeTable [FloatShort]   := SizeREAL;
+    SizeTable [FloatLong]    := SizeLONGREAL;
+
+    SuffixTable [UnsignedByte] := 'b';
+    SuffixTable [UnsignedWord] := 'w';
+    SuffixTable [UnsignedLong] := 'l';
+    SuffixTable [SignedByte]   := 'b';
+    SuffixTable [SignedWord]   := 'w';
+    SuffixTable [SignedLong]   := 'l';
+    SuffixTable [FloatShort]   := 's';
+    SuffixTable [FloatLong]    := 'l';
+
+    SignedTable [UnsignedByte] := FALSE;
+    SignedTable [UnsignedWord] := FALSE;
+    SignedTable [UnsignedLong] := FALSE;
+    SignedTable [SignedByte]   := TRUE;
+    SignedTable [SignedWord]   := TRUE;
+    SignedTable [SignedLong]   := TRUE;
+    SignedTable [FloatShort]   := FALSE;
+    SignedTable [FloatLong]    := FALSE;
+
+    RelationTable [RelEqual]	     [FALSE] := 'e';
+    RelationTable [RelUnequal]	     [FALSE] := 'ne';
+    RelationTable [RelLess]	     [FALSE] := 'b';
+    RelationTable [RelLessOrEqual]   [FALSE] := 'be';
+    RelationTable [RelGreater]	     [FALSE] := 'a';
+    RelationTable [RelGreaterOrEqual][FALSE] := 'ae';
+    RelationTable [RelEqual]	     [TRUE ] := 'e';
+    RelationTable [RelUnequal]	     [TRUE ] := 'ne';
+    RelationTable [RelLess]	     [TRUE ] := 'l';
+    RelationTable [RelLessOrEqual]   [TRUE ] := 'le';
+    RelationTable [RelGreater]	     [TRUE ] := 'g';
+    RelationTable [RelGreaterOrEqual][TRUE ] := 'ge';
+
+    Reverse [RelEqual]		:= RelEqual;
+    Reverse [RelUnequal]	:= RelUnequal;
+    Reverse [RelLess]		:= RelGreater;
+    Reverse [RelLessOrEqual]	:= RelGreaterOrEqual;
+    Reverse [RelGreater]	:= RelLess;
+    Reverse [RelGreaterOrEqual]	:= RelLessOrEqual;
+
+    PowerTable [0] := 1;
+    FOR i := 1 TO MaxPowerTable DO PowerTable [i] := 2 * PowerTable [i-1] END;
+
+    WordReg[Regeax] := '%ax';
+    WordReg[Regebx] := '%bx';
+    WordReg[Regecx] := '%cx';
+    WordReg[Regedx] := '%dx';
+    WordReg[Regesi] := '%si';
+    WordReg[Regedi] := '%di';
+    ByteReg[Regeax] := '%al';
+    ByteReg[Regebx] := '%bl';
+    ByteReg[Regecx] := '%cl';
+    ByteReg[Regedx] := '%dl';
+
+    DefineOption (oEmitIR, 'EmitIR', FALSE, FALSE);
+    DefineOption (oEmitMatch, 'EmitMatch', FALSE, FALSE);
+    DefineOption (oRegAlloc, 'RegAlloc', FALSE, FALSE);
+    DefineOption (oCCall, 'CcallsMocka', FALSE, FALSE);    
+    DefineOption (ElfOption, 'elf', FALSE, TRUE);
+    DefineOption (oAssemblerListing, 'S', FALSE, TRUE);
+}
+
+
+IpTestImport {
+FROM	Prints	IMPORT	PrintSHORTCARD, PrintLONGCARD, PrintSHORTINT,
+			PrintLONGINT, PrintDataTempo, PrintAddressTempo,
+			PrintSysProc, PrintLabelList, PrintLabel,
+			PrintMode, PrintString, PrintStringIndex, PrintLONGREAL,
+			PrintREAL, PrintBITSET, PrintProcIndex, PrintRelation,
+			PrintModuleIndex, PrintCHAR, PrintADDRESS,
+			PrintRelSymb, PrintMemAdr, PrintAdrMode;
+}
+
+
+IpEmitI1 {
+      localavail[0] := { ORD (Regeax)-0,  ORD (Regebx)-0,  ORD (Regecx)-0,  ORD (Regedx)-0,  ORD (Regesi)-0,  ORD (Regedi)-0,  ORD (Regst)-0, ORD (Regst1)-0};
+}
+
+
+END CODE_GENERATOR_DESCRIPTION CgMobil.

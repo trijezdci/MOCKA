@@ -1,0 +1,357 @@
+(******************************************************************************)
+(* Copyright (c) 1988 by GMD Karlruhe, Germany				      *)
+(* Gesellschaft fuer Mathematik und Datenverarbeitung			      *)
+(* (German National Research Center for Computer Science)		      *)
+(* Forschungsstelle fuer Programmstrukturen an Universitaet Karlsruhe	      *)
+(* All rights reserved.							      *)
+(******************************************************************************)
+
+DEFINITION MODULE TrBase;
+ 
+   FROM SuTree IMPORT
+      Node;
+   FROM DfTable IMPORT
+      Type, TypeClass, Object, FormalParam, RecordField;
+   FROM SuTokens IMPORT
+      Ident;
+   FROM SuErrors IMPORT
+      SourcePosition;
+   FROM SuValues IMPORT
+      Value;
+   FROM CgMobil IMPORT
+      DataOperand, AddressOperand, Label, Operand, AddressTempo,
+      Mode;
+    
+
+   CONST 
+
+      MaxWithNesting      = 16; (* max. depth of nested WITH statements *)
+      CheckLowerBound     = TRUE;
+      CheckUpperBound     = TRUE;
+      EmitErrMsg          = TRUE;
+      DontCheckLowerBound = FALSE;
+      DontCheckUpperBound = FALSE;
+      DontEmitErrMsg      = FALSE;
+
+
+   TYPE 
+
+      AttrKind  = (
+	 IsVariableObj, IsModuleObj, IsTypeObj, 
+	 IsProcedureObj, IsStandardProcedureObj, IsFieldObj,
+	 IsConstant, IsDynExpression,
+	 IsRecordField, IsArrayElement, IsReferencedObject, IsError );
+
+      Attributes = 
+	 RECORD
+	   type : Type;
+	    pos  : SourcePosition;
+	    CASE kind : AttrKind OF
+	    | IsVariableObj, IsModuleObj, IsTypeObj, IsProcedureObj,
+	      IsStandardProcedureObj, IsFieldObj,
+	      IsRecordField, IsArrayElement, IsReferencedObject,
+	      IsDynExpression:
+	       op : Operand;
+	       CASE : AttrKind OF
+	       | IsVariableObj, IsModuleObj, IsTypeObj, IsProcedureObj,
+		 IsStandardProcedureObj, IsFieldObj:
+		  obj : Object;
+	       ELSE (* no fields *)
+	       END; (* CASE *)
+	    | IsConstant:
+	       val : Value;
+	    ELSE (* no fields *)
+	    END; (* CASE *)
+	 END; (* RECORD *)
+    
+      BooleanLabels =
+	 RECORD
+	    trueLabel, falseLabel : Label;
+	    trueLabelFollows      : BOOLEAN;
+	 END;
+
+      tpParNum = SHORTCARD;
+    
+
+   VAR 
+
+      BitsetBaseType     : Type;
+
+      OpenArrayIndexType : Type;
+      (* Index type of open arrays.  *)
+
+      OpenArrayIndexMode : Mode;
+      ActualProcedureLevel : SHORTCARD;
+
+
+      WithStack : ARRAY [1..MaxWithNesting] OF AddressTempo;
+      (* Stack of address temporaries that correspond with the expressions of
+         nested WITH statements.  *)
+
+      TopWithStack : SHORTCARD [0..MaxWithNesting]; 
+      (* Actual top element in WithStack. WithStack is empty,
+	 if TopWithStack = 0.  *)
+			      
+      InhibitConstFold : BOOLEAN; 
+      (* Inhibits constant folding, if TRUE.  *)
+
+      DemandConstFold : BOOLEAN;
+      (* If TRUE, then the compiler is forced to do constant folding in the
+	 actual context.
+	 This is necessary in the context of boolean CASE labels, for
+	 which no jumps may be generated.  *)
+
+      InConditionContext : BOOLEAN;
+      (* Is TRUE, if the actual context is a condition.
+	 Needed for the processing
+	 of the standard procedure ODD: if InConditionContext,
+	 then a jump has to be generated (TestOddAndBranch),
+	 otherwise no jump is necessary 
+	 (e.g.  constant folding could take place).  *)
+
+      BL : BooleanLabels;  
+      (* If the actual context is a condition, then BL are the boolean labels
+	 for TestOddAndBranch, otherwise BL is undefined.  *)
+
+      OddCalledInConditionContext : BOOLEAN;
+      (* Acknowledgement flag. If a function is called in a condition context, 
+	 then the flag is set to TRUE (by module TrStProc), 
+	 if and only if the standard procedure ODD was the called function. 
+	 If so, the jump code is already emitted in the standard procedure
+	 context and may not be emitted also in the condition context.
+	 The flag is undefined if the actual context as not a condition
+	 context.  *)
+
+      InNotContext : BOOLEAN;
+      (* The actual context is a NOT condition or NOT expression.
+	 Used for attribute evaluation for the CgMobil
+	 compare-, test- and branch operators.  *)
+
+      FalseValue : Value;
+      (* Represents FALSE.  *)
+
+      RealZeroValue : Value;
+      (* Represents 0.0 (of type REAL).  *)
+
+      LongRealZeroValue : Value;
+      (* Represents 0.0 (of type LONGREAL).  *)
+
+      OneValue : Value;
+      (* Represents 1.  *)
+
+
+      TwoValue : Value;
+      (* Represents 2.  *)
+
+      OrdMaxCharValue : Value;
+      (* Represents ORD(MAX(CHAR)).  *)
+
+      OneCharValue : Value;
+      (* the character 1C represented as SHORTCARD  *)
+
+      MaxCharValueAsCardinal : Value;
+      (* the character MaxChar represented as SHORTCARD  *)
+   
+   
+      InitAttr : Attributes;
+      (* Initial value for records of type 'Attributes'.  *)
+      
+      (* compiler options: *)
+      (* ================= *)
+      RangeCheckOption      : BOOLEAN;
+      IndexCheckOption      : BOOLEAN;
+      StringOption          : BOOLEAN;
+      (* Allows constant strings on VAR ARRAY OF CHAR parameter position.  *)
+
+   PROCEDURE TermIdent
+      (    ThisNode : Node; 
+       VAR id       : Ident; 
+       VAR IdRep    : ARRAY OF CHAR; 
+       VAR pos      : SourcePosition);
+   (* Processes the non-terminal 'Ident'.  *)
+
+   PROCEDURE TermIntNumber
+      (    ThisNode : Node;
+       VAR Attr     : Attributes );
+   (* Processes the terminal that is an integer number.  *)
+
+   PROCEDURE TermRealNumber
+      (    ThisNode : Node;
+       VAR Attr     : Attributes );
+   (* Processes the terminal that is a real number.  *)
+
+   PROCEDURE TermChar
+      (    ThisNode : Node;
+       VAR Attr     : Attributes );
+   (* Processes the terminal that is a character.  *)
+
+   PROCEDURE TermString
+      (    ThisNode : Node;
+       VAR Attr     : Attributes );
+   (* Processes the terminal that is a string.  *)
+    
+   PROCEDURE TypeOfArithmeticValue 
+      (val : Value 
+      )    : Type;
+   (* Returns the type corrensponding to the range of 'val'.
+      If 'val' is not an arithmetic value TypeERROR is returned.  *)
+    
+   PROCEDURE GetRange 
+      (    ty       : Type;
+       VAR lwb, upb : Value );
+   (* Returns the lowest and highest value of type 'ty'.
+      'ty' has to be an scalar or set type, otherwise an
+      CompilerError is raised.  *)
+
+   PROCEDURE GetStaticArrayBounds ( ArrayType : Type; VAR lwb, upb : LONGINT );
+   (* Returns the lowest and highest index of 'ArrayType'.
+      Pre-condition: 'ArrayType' has to be static. Not checked.  *)
+				     
+   PROCEDURE GetHighOfStaticArrayForOpenArray 
+       (    ArrayType, OpenArrayComponentType : Type;
+	VAR high : LONGINT );
+   (* Returns HIGH of the static 'ArrayType' that appears on position of an
+      open array parameter with component type 'OpenArrayComponentType'.
+      The returned 'high' is determined by
+      ArrayType^.size DIV OpenArrayComponentType^.size.
+      No check is done whether 'ArrayType' is static.  *)
+
+   PROCEDURE GetStaticArrayFieldCount
+      (ArrayType : Type
+      ) : LONGINT;
+   (* Returns the number of array elements of 'ArrayType'.  *)
+    
+   PROCEDURE SignedType
+      (ty : Type
+      )   : BOOLEAN;
+   (* Returns whether type 'ty' has a sign.  *)
+    
+   PROCEDURE IsExpression
+      (attr : Attributes
+      )     : BOOLEAN;
+   (* Returns TRUE, if 'attr' specifies an expression (correct or erroneous),
+      otherwise FALSE is returned, and an error message at 'attr.pos'
+      is emitted.  *)
+    
+   PROCEDURE IsExpression1
+      (attr : Attributes 
+      )     : BOOLEAN;
+   (* Returns TRUE, if 'attr' specifies an expression (correct or erroneous). *)
+    
+   PROCEDURE IsAddressable
+      (attr : Attributes
+      )     : BOOLEAN;
+   (* Returns whether 'attr' specifies on addressable object, i.e. it is
+      neither a constant nor a dynamic expression nor an erroneous expression.*)
+    
+   PROCEDURE ConvertCharToString 
+      (VAR attr : Attributes);
+   (* Converts a constant character into a string.
+      Pre-condition: is 'attr.kind=IsConstant' and 'attr.type^.class=ClassCHAR'
+      (not checked).
+      Post-condition: 'attr.kind=IsConstant'and 'attr.type^.class=ClassSTRING'*)
+    
+   PROCEDURE ConstToOp
+       (VAR attr : Attributes; TargetType : Type );
+   (* Converts the constant (expression) denoted by 'attr' into an 
+      operand (description) of type 'TargetType'. 
+      The pre-condition is 'attr.kind = IsConstant' with the constant in
+      'attr.val' (not checked).
+      The post-condition is 'attr.kind = IsDynExpression' with the operand 
+      description (of type 'TargetType') in 'attr.op'.  *)
+      
+   PROCEDURE ValueToOp
+      (    val        : Value; 
+	   ValType    : Type; 
+	   TargetType : Type;
+       VAR op         : DataOperand; 
+	   pos        : SourcePosition);
+   (* Converts the constant value 'val' of type 'ValType' into the 
+      corresponding operand 'op' of type 'TargetType'.  *)
+
+   PROCEDURE ModeOf
+      (ty : Type
+      )   : Mode;
+   (* Returns the corresponding mode of 'ty'.  *)
+    
+   PROCEDURE AdjustMode
+       (    SourceType   :   Type;
+	    DestType     :   Type;
+	    SourceOp     :   DataOperand;
+	VAR AdjustedOp   :   DataOperand );
+   (* If mode of 'DestType' and 'SourceType' are different, the mode of the
+      operand 'SourceOp' (of type 'SourceType') becomes adjusted (expanded or
+      shortened) to the mode of 'DestType'. 'AdjustedOp' is the adjusted
+      'SourceOp'.
+      Pre-condition is, that 'SourceType' and 'DestType' are assignment 
+      compatible resp. parameter compatible (not checked).
+      Post-condition is 'AdjustedOp' = 'SourceOp' with the mode of 'DestType'.*)
+    
+   PROCEDURE UseObject
+      (VAR attr : Attributes);
+   (* Get content of an object that has an address and is of a scalar type.
+      Pre-condition is, that the object (a designator) denoted by 'attr' has
+      a storage address and 'attr.op' specifies the access path to that object.
+      If the pre-condition is given, 'attr.op' returns the value of the
+      object, otherwise the unmodified 'attr' is returned.  *)
+
+   PROCEDURE ConstantIsInRange
+      (ty, tyVal : Type; 
+       val       : Value; 
+       pos       : SourcePosition
+      )          : BOOLEAN;
+   (* Compile-time range check.
+      Returns TRUE, if the constant value 'val' of type 'tyVal' is in the
+      range defined by 'ty'. If not, an error message at 'pos' is emitted.
+      'tyVal' and 'ty' have to be assignment compatible (not checked).  *)
+			  
+   PROCEDURE RuntimeRangeCheck
+      (    ty       : Type;
+	   CheckLwb : BOOLEAN;
+	   CheckUpb : BOOLEAN;
+       VAR attr     : Attributes );
+   (* Run-time range check.
+      Emits intermediate code to check that the operand 'attr.op' is in the 
+      range defined by 'ty'. 'attr.type' has to be scalar 
+      and assignment compatible with 'ty' (not checked).  *)
+
+   PROCEDURE IsInRange
+      (    ty       : Type;
+	   CheckLwb : BOOLEAN;
+	   CheckUpb : BOOLEAN;
+       VAR attr     : Attributes
+      )             : BOOLEAN;
+   (* Returns TRUE, if the expression described by 'attr' is in the range
+		    described by 'ty'. Checked for constant expressions
+		    but not for dynamic expressions.
+      'ty' and 'attr.type' are scalar and and have to be 
+      assignment compatible (not checked).  *)
+    
+   PROCEDURE IsInSetBaseRange
+      (VAR elem    : Attributes;
+	   SetType : Type
+      ) : BOOLEAN;
+   (* Returns TRUE, if the expression specified by 'elem' is in the range
+      specified by the base type of 'SetType', otherwise FALSE.
+      'SetType' specifies a set type or type BITSET.
+      FALSE is returned also if 'elem' or 'SetType' is erroneous, and 
+      an error message at 'elem.pos' is emitted.
+      'elem.type' has to be compatible with base type of 'SetType'
+      (not checked).  *)
+    
+   PROCEDURE TypeTransfer
+      (    SourceAttr : Attributes;
+	   TargetType : Type;
+       VAR result     : Attributes;
+	   pos        : SourcePosition;
+	   convert    : BOOLEAN);
+   (* Converts the expression denoted by 'SourceAttr' into
+      attributes description of type 'TargetType'. If 'convert' is true,
+      this will make a type conversion [ VAL (TargetType, Source) ] with
+      range checks (if enabled) else it will make a type transfer
+      [ TargetType (Source) ]. *)
+
+   PROCEDURE InitTrBase;
+   (* Initializes module TrBase.  *)
+    
+END TrBase.

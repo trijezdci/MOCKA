@@ -1,0 +1,241 @@
+(******************************************************************************)
+(* Copyright (c) 1988 by GMD Karlruhe, Germany				      *)
+(* Gesellschaft fuer Mathematik und Datenverarbeitung			      *)
+(* (German National Research Center for Computer Science)		      *)
+(* Forschungsstelle fuer Programmstrukturen an Universitaet Karlsruhe	      *)
+(* All rights reserved.							      *)
+(******************************************************************************)
+
+DEFINITION MODULE SuValues;
+
+   TYPE
+
+      ValueRange = (
+	 RangeLONGINT,
+	 RangeLONGCARD,
+	 RangeLONGREAL,
+      
+	 (* "ambiguous types" *)
+
+	 RangeSIorLI,
+	 RangeSIorSCorLIorLC,
+	 RangeSCorLIorLC,
+	 RangeLIorLC,
+	 RangeSRorLR
+      );
+
+      ValueClass = (
+	 BoolValue, CardinalValue, LongCardValue,
+	 IntegerValue, LongIntValue, RealValue, LongRealValue,
+	 CharValue, StringValue, SetValue
+	 );
+
+      CalcOperator = (
+	 (* --Conversion from external representation-- *)
+	 GetDecimal, GetOctal, GetHex,
+	 GetReal, GetChar, GetCharCode, GetString,
+	 (* --Unary operators-- *)
+	 CalcNot, CalcUnaryMinus, CalcIncr,
+	 (* --Binary operators-- *)
+	 CalcPlus, CalcMinus, CalcTimes, CalcDiv, CalcMod,
+	 CalcOr, CalcAnd,
+	 CalcEq, CalcLess, CalcLessOrEq, CalcNotEq,
+	 CalcGreater, CalcGreaterOrEq, CalcIn
+	 );
+
+      StringRepresentation =
+	 POINTER TO CHAR;
+
+      Value = 
+	 RECORD
+	    CASE class : ValueClass OF
+	    | BoolValue      : BoolVal      : BOOLEAN;
+	    |  CardinalValue : CardinalVal  : SHORTCARD;
+	    |  LongCardValue : LongCardVal  : LONGCARD;
+	    |  IntegerValue  : IntegerVal   : SHORTINT;
+	    |  LongIntValue  : LongIntVal   : LONGINT;
+	    |  RealValue     : RealVal      : REAL;
+	    |  LongRealValue : LongRealVal  : LONGREAL;
+	    |  CharValue     : CharVal      : CHAR;
+	    |  SetValue      : SetVal       : BITSET;
+	    |  StringValue   : StringVal    : StringRepresentation;
+			       StringLength : SHORTCARD;
+	    END
+	 END;
+
+
+   VAR
+
+      ZeroValue : Value;
+      (* Value representing 0 - read only.  *)
+
+
+      TrueValue : Value;
+      (* Value representing TRUE - read only.  *)
+
+      EmptySetValue : Value;
+      (* Empty set - read only.  *)
+
+      MinCharValue : Value;
+      (* Value representing MinChar - read only.  *)
+
+      MaxCharValue : Value;
+      (* Value representing MaxChar - read only.  *)
+
+      MaxBitSetValue : Value;
+      (* Value representing MaxBitSet - read only.  *)
+
+      MaxShortCardValue : Value;
+      (* Value representing MaxShortCard - read only.  *)
+
+      MaxLongCardValue : Value;
+      (* Value representing MaxLongCard - read only.  *)
+
+      MinShortIntValue : Value;
+      (* Value representing MinShortInt - read only.  *)
+
+      MaxShortIntValue : Value;
+      (* Value representing MaxShortInt - read only.  *)
+
+      MinLongIntValue : Value;
+      (* Value representing MinLongInt - read only.  *)
+
+      MaxLongIntValue : Value;
+      (* Value representing MaxLongInt - read only.  *)
+
+      MinRealValue : Value;
+      (* Value representing MinReal - read only.  *)
+
+      MaxRealValue : Value;
+      (* Value representing MaxReal - read only.  *)
+
+      MinLongRealValue : Value;
+      (* Value representing MinLongReal - read only.  *)
+
+      MaxLongRealValue : Value;
+      (* Value representing MaxLongReal - read only.  *)
+
+
+   PROCEDURE ConvertToValue
+      (    op      : CalcOperator;
+       VAR buffer  : ARRAY OF CHAR;
+	   start   : SHORTCARD;
+	   stop    : SHORTCARD;
+       VAR val     : Value;
+       VAR success : BOOLEAN);
+   (* Perform the Operation val := op ( buffer[start..stop] )
+      where op is an operator specifying conversion
+      from external representation to internal "Value" format *)
+
+   PROCEDURE ConvertShortCardToValue
+      (    card    : SHORTCARD;
+       VAR val     : Value);
+   (* Convert SHORTCARD to value.  *)
+	
+   PROCEDURE ConvertLongCardToValue
+      (    card    : LONGCARD;
+       VAR val     : Value);
+   (* Convert LONGCARD to value.  *)
+	
+   PROCEDURE ConvertBytesToValue
+      (VAR bytes   : ARRAY OF CHAR;
+	   length  : SHORTCARD;
+       VAR val     : Value);
+   (* Convert a byte string to value.  *)
+	
+   PROCEDURE calc1
+      (    op      : CalcOperator;
+	   x       : Value;
+       VAR val     : Value;
+       VAR success : BOOLEAN);
+   (* Perform the operation val := op x .  *)
+
+   PROCEDURE calc2
+      (    op      : CalcOperator;
+	   x       : Value;
+	   y       : Value;
+       VAR val     : Value;
+       VAR success : BOOLEAN);
+   (* Perform the operation val := x op y .  *)
+
+   PROCEDURE AddRangeToSet 
+      (    lwb    : Value;
+	   upb    : Value;
+	   set    : Value;
+       VAR result : Value);
+   (* Perform the operation result := set + {lwb .. upb} *)
+
+   PROCEDURE ValRange
+      (val : Value
+      )    : ValueRange;
+   (* Returns the smallest range containing val.  *)
+      
+   PROCEDURE OrdOfValue
+      (val : Value
+      )    : LONGCARD;
+   (* Returns ordinality of val.  *)
+
+   PROCEDURE ConvToBool
+      (val : Value) : BOOLEAN;
+   (* Converts val to BOOLEAN.  *)
+
+   PROCEDURE ConvToBytes
+      (    val     : Value;
+       VAR bytes   : ARRAY OF CHAR;
+       VAR length  : SHORTCARD);
+   (* Converts val to byte string.  *)
+      
+   PROCEDURE ConvToShortCard 
+      (val : Value
+      )    : SHORTCARD;
+   (* Converts val to SHORTCARD (SHORTCARD value allowed).  *)
+      
+   PROCEDURE ConvToLongCard 
+      (val : Value
+      )    : LONGCARD;
+   (* Converts val to LONGCARD (LONGCARD value allowed).  *)
+      
+   PROCEDURE ConvToShortInt 
+      (val : Value
+      )    : SHORTINT;
+   (* Converts val to SHORTINT (SHORTINT value allowed).  *)
+
+   PROCEDURE ConvToLongInt 
+      (val : Value
+      )    : LONGINT;
+   (* Converts val to LONGINT (LONGINT value allowed).  *)
+
+   PROCEDURE ConvToReal 
+      (val : Value
+      )    : REAL;
+   (* Converts val to REAL (REAL value allowed).  *)
+
+   PROCEDURE ConvToLongReal 
+      (val : Value
+      )    : LONGREAL;
+   (* Converts val to LONGREAL (LONGREAL value allowed).  *)
+
+   PROCEDURE ConvToChar 
+      (val : Value
+      )    : CHAR;
+   (* Converts val to CHAR (CHAR value allowed).  *)
+
+   PROCEDURE ConvToSet 
+      (val : Value
+      )    : BITSET;
+   (* Converts val to BITSET (set value allowed).  *)
+
+   PROCEDURE ConvToString 
+      (    val : Value;
+       VAR str : ARRAY OF CHAR);
+   (* Converts val to string (string value allowed).  *)
+
+   PROCEDURE StringLength
+      (val : Value
+      )    : SHORTCARD;
+   (* Returns the number of characters of string denoted by val.  *)
+       
+   PROCEDURE InitCalc;
+   (* Initialize.  *)
+    
+END SuValues.

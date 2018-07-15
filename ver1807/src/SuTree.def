@@ -1,0 +1,385 @@
+(******************************************************************************)
+(* Copyright (c) 1988 by GMD Karlruhe, Germany				      *)
+(* Gesellschaft fuer Mathematik und Datenverarbeitung			      *)
+(* (German National Research Center for Computer Science)		      *)
+(* Forschungsstelle fuer Programmstrukturen an Universitaet Karlsruhe	      *)
+(* All rights reserved.							      *)
+(******************************************************************************)
+
+DEFINITION MODULE SuTree;
+
+   FROM SuErrors IMPORT
+      SourcePosition;
+   FROM SuValues IMPORT
+      Value;
+   FROM SuTokens IMPORT
+      Ident;
+
+
+   TYPE
+
+      (*------------------------------------------------------------------------
+	 The type 'NodeKind' introduces the node kinds of abstract syntax trees.
+	 Node kinds are grouped into classes
+	 (E.g. the class 'Designator' comprises the node kinds
+	 DesignatorIdent, DesignatorSelect, ...) .
+	 In a CFG node classes correspond to nonterminals,
+	 node kinds to rules, there are no terminal symbols.
+	 Two special classes are give by nodes of kind 'Ident' or 'Value'.
+	 Such nodes represent an Ident (see SuTokens) or Value (see SuValues).
+
+	 The comments indicate the arity of the nodes as well as the
+	 names and classes of the sons.
+      ------------------------------------------------------------------------*)
+
+      NodeKind =
+
+      (  (*=== Designator ===*)
+
+	 DesignatorIdent 
+	    (* (1) ident        : Ident          *)
+
+      ,  DesignatorSelect 
+	    (* (1) container    : Designator     *)
+	    (* (2) selector     : Ident          *)
+	 
+      ,  DesignatorSubscript 
+	    (* (1) array        : Designator     *)
+	    (* (2) subscript    : Expression     *)
+	 
+      ,  DesignatorDeref 
+	    (* (1) pointer      : Designator     *)
+	 
+	 (*=== Memberlist ===*)
+
+      ,  MemberlistElem
+	    (* (1) member       : Member         *)
+	    (* (2) members      : Memberlist     *)
+
+      ,  MemberlistEnd
+	    (* ---                               *)
+
+	 (*=== Member ===*)
+
+      ,  MemberExpr
+	    (* (1) expr         : Expression     *)
+	 
+      ,  MemberRange
+	    (* (1) lwb          : Expression     *)
+	    (* (2) upb          : Expression     *)
+
+	 (*=== Expressionlist ===*)
+
+      ,  ExpressionlistElem
+	    (* (1) expression   : Expression     *)
+	    (* (2) expressions  : Expressionlist *)
+
+      ,  ExpressionlistEnd
+	    (* ---                               *)
+
+	 (*=== Expression ===*)
+
+      ,  ExpressionMonadicPlus, ExpressionMonadicMinus, ExpressionNot
+
+	    (* (1) arg : Expression              *)
+	 
+      ,  ExpressionPlus, ExpressionMinus, ExpressionTimes
+      ,  ExpressionRealDiv, ExpressionIntDiv, ExpressionMod
+      ,  ExpressionAnd, ExpressionOr, ExpressionIn
+      ,  ExpressionEqual, ExpressionUnEqual
+      ,  ExpressionLess, ExpressionLessOrEqual
+      ,  ExpressionGreater, ExpressionGreaterOrEqual
+	    (* (1) leftarg      : Expression     *)
+	    (* (2) rightarg     : Expression     *)
+	 
+      ,  ExpressionIntNumber, ExpressionRealNumber
+      ,  ExpressionChar, ExpressionString
+	    (* (1) val          : Value          *)
+
+      ,  ExpressionSet 
+	    (* (1) type         : Designator     *)
+	    (* (2) members      : Memberlist     *)
+	 
+      ,  ExpressionCall  
+	    (* (1) proc         : Designator     *)
+	    (* (2) args         : Expressionlist *)
+	 
+      ,  ExpressionDesignator
+	    (* (1) designator   : Designator     *)
+
+      ,  ExpressionError
+	    (* ---                               *)
+
+
+	 (*=== Labellist ===*)
+
+      ,  LabellistElem
+	    (* (1) label        : Label          *)
+	    (* (2) labels       : Labellist      *)
+
+      ,  LabellistEnd
+	    (* ---                               *)
+
+	 (*=== Label ===*)
+
+      ,  LabelExpr 
+	    (* (1) expr         : Expression     *)
+	 
+      ,  LabelRange 
+	    (* (1) lwb          : Expression     *)
+	    (* (2) upb          : Expression     *)
+	 
+	 (*=== Choicelist ===*)
+
+      ,  ChoicelistElem
+	    (* (1) choice       : Choice         *)
+	    (* (2) choices      : Choicelist     *)
+
+      ,  ChoicelistEnd
+	    (* ---                               *)
+
+	 (*=== Choice ===*)
+
+      ,  Choice
+	    (* (1) labels       : Labellist      *)
+	    (* (2) statements   : Statementlist  *)
+
+	 (*=== Statementlist ===*)
+
+      ,  StatementlistElem
+	    (* (1) statement    : Statement      *)
+	    (* (2) statements   : Statementlist  *)
+
+      ,  StatementlistEnd
+	    (* ---                               *)
+
+	 (*=== Statement ===*)
+
+      ,  StatementIf 
+	    (* (1) condition    : Expression     *)
+	    (* (2) thenpart     : Statementlist  *)
+	    (* (3) elsepart     : Statementlist  *)
+	 
+      ,  StatementCaseSimple 
+	    (* (1) expression   : Expression     *)
+	    (* (2) choices      : Choicelist     *)
+
+      ,  StatementCaseElse 
+	    (* (1) expression   : Expression     *)
+	    (* (2) choices      : Choicelist     *)
+	    (* (3) elsepart     : Statementlist  *)
+	 
+	 
+      ,  StatementWhile, StatementRepeat 
+	    (* (1) condition    : Expression     *)
+	    (* (2) body         : Statementlist  *)
+	 
+      ,  StatementLoop 
+	    (* (1) body         : Statementlist  *)
+	 
+      ,  StatementFor 
+	    (* (1) controlvar   : Ident          *)
+	    (* (2) from         : Expression     *)
+	    (* (3) to           : Expression     *)
+	    (* (4) by           : Expression     *)
+	    (* (5) body         : Statementlist  *)
+
+      ,  StatementWith 
+	    (* (1) withclause   : Expression     *)
+	    (* (2) body   	: Statementlist  *)
+	 
+      ,  StatementExit 
+	    (* ---                               *)
+
+      ,  StatementReturnexpr 
+	    (* (1) expr         : Expression     *)
+	 
+      ,  StatementReturnvoid 
+	    (* ---                               *)
+	 
+      ,  StatementAssign 
+	    (* (1) lhs          : Expression     *)
+	    (* (2) rhs          : Expression     *)
+	
+      ,  StatementCall  
+	    (* (1) proc         : Expression     *)
+	    (* (2) args         : Expressionlist *)
+	 
+	 (*=== Statementpart ===*)
+
+      ,  Statementpart 
+	    (* (1) statements   : Statementlist  *)
+      );
+
+   (* HH 7/93: Node nicht mehr opaque *)
+   (* Opaque Typen sind sehr dubugging-unfreundlich !!! *)
+
+   Node = POINTER TO NodeDescription;
+
+(*
+   variant MUST BE OF TYPE CARDIAL!
+
+   This assures that the variant part has alignment 8.
+   Required by a hack in the implementation.
+*)
+
+   NodeDescription =
+      RECORD
+         pos : SourcePosition;
+         CASE variant : CARDINAL OF
+	   0, 1, 2, 3, 4, 5 :
+	     kind : NodeKind;
+             Son1, Son2, Son3, Son4, Son5 : Node;
+         | 6 :
+	     ident : Ident;
+         | 7 :
+	     value : Value;
+         END
+      END;
+
+
+   PROCEDURE PutIdent
+      (    pos  : SourcePosition;
+	   id   : Ident;
+       VAR node : Node);
+   (* Create a new node 'node' of class Ident to
+      represent the identifier 'id'.  *)
+
+   PROCEDURE PutValue 
+      (    pos  : SourcePosition;
+	   val  : Value;
+       VAR node : Node);
+   (* Create a new node 'node' of class Value to
+      represent the value 'val'.  *)
+
+   PROCEDURE GetIdent 
+      (    node : Node;
+       VAR pos  : SourcePosition;
+       VAR id   : Ident);
+   (* On exit 'id' holds the identifier represented by node 'node'.  *)
+
+   PROCEDURE GetValue 
+      (    node : Node;
+       VAR pos  : SourcePosition;
+       VAR val  : Value);
+   (* On exit 'val' holds the value represented by node 'node'.  *)
+
+   PROCEDURE put0
+      (   kind   : NodeKind;
+	  pos    : SourcePosition; 
+      VAR father : Node);
+   (* Construct a new node 'father' with no sons.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE put1 
+      (    kind   : NodeKind;
+	   pos    : SourcePosition; 
+	   son1   : Node;
+       VAR father : Node);
+   (* Construct a new node 'father' with one son given by 'son1'.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE put2 
+      (    kind   : NodeKind;
+	   pos    : SourcePosition; 
+	   son1   : Node;
+	   son2   : Node;
+       VAR father : Node);
+   (* Construct a new node 'father' with two sons given by 'son1', 'son2'.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE put3 
+      (    kind   : NodeKind;
+	   pos    : SourcePosition; 
+	   son1   : Node;
+	   son2   : Node;
+	   son3   : Node;
+       VAR father : Node);
+   (* Construct a new node 'father' with three sons given
+      by 'son1', ..., 'son3'.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE put4 
+      (    kind   : NodeKind;
+	   pos    : SourcePosition; 
+	   son1   : Node;
+	   son2   : Node;
+	   son3   : Node;
+	   son4   : Node;
+       VAR father : Node);
+   (* Construct a new node 'father' with four sons given
+      by 'son1', ..., 'son4'.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE put5 
+      (    kind   : NodeKind;
+	   pos    : SourcePosition; 
+	   son1   : Node;
+	   son2   : Node;
+	   son3   : Node;
+	   son4   : Node;
+	   son5   : Node;
+       VAR father : Node);
+   (* Construct a new node 'father' with five sons given
+      by 'son1', ..., 'son5'.
+      'kind' is the node kind, 'pos' the source position of
+      the corresponding construct.  *)
+
+   PROCEDURE append 
+      (list : Node;
+       item : Node);
+   (* Let node 'item' be the second son of node 'list'.  *)
+
+   PROCEDURE get1 
+      (    father : Node;
+       VAR son1   : Node);
+   (* On exit 'son1' holds the son of node 'father'
+      (having one son).  *)
+      
+
+   PROCEDURE get2 
+      (    father : Node;
+       VAR son1   : Node;
+       VAR son2   : Node);
+   (* On exit 'son1', 'son2' hold the sons of node 'father'
+      (having two sons) *)
+   PROCEDURE get3 
+      (    father : Node;
+       VAR son1   : Node;
+       VAR son2   : Node;
+       VAR son3   : Node);
+   (* On exit 'son1', ..., 'son3' hold the sons of node 'father'
+      (having three sons).  *)
+
+   PROCEDURE get4 
+      (    father : Node;
+       VAR son1   : Node;
+       VAR son2   : Node;
+       VAR son3   : Node;
+       VAR son4   : Node);
+   (* On exit 'son1', ..., 'son4' hold the sons of node 'father'
+      (having four sons).  *)
+
+   PROCEDURE get5 
+      (    father : Node;
+       VAR son1   : Node;
+       VAR son2   : Node;
+       VAR son3   : Node;
+       VAR son4   : Node;
+       VAR son5   : Node);
+   (* On exit 'son1', ..., 'son5' hold the sons of node 'father'
+      (having five sons).  *)
+
+   PROCEDURE get 
+      (    node : Node;
+       VAR kind : NodeKind;
+       VAR pos  : SourcePosition);
+   (* On exit 'kind' holds the node kind of node 'node',
+      'pos' is the source position of the corresponding construct.  *)
+
+END SuTree.
