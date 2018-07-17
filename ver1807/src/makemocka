@@ -1,8 +1,10 @@
 #!/bin/sh
 #
-# Christian Maurer   v. 5. August 2012
+# Make script for MOCKA 1807
 
 export MOCKAM2=
 export MOCKALINK=
 
 echo p Mocka | mocka
+
+# END OF FILE

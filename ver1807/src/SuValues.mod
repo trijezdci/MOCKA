@@ -1,17 +1,25 @@
-(******************************************************************************)
-(* Copyright (c) 1988 by GMD Karlruhe, Germany				      *)
-(* Gesellschaft fuer Mathematik und Datenverarbeitung			      *)
-(* (German National Research Center for Computer Science)		      *)
-(* Forschungsstelle fuer Programmstrukturen an Universitaet Karlsruhe	      *)
-(* All rights reserved.							      *)
-(******************************************************************************)
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+IMPLEMENTATION MODULE SuValues;
 
 (* Changes:								*)
 (*   CvR 91/07/09 Fixed Negate (negating 0 gave random results).	*)
 (*   CvR 91/05/03 Fixed Bug, which EXPLICITLY calculates the sign of	*)
 (*		  A*B to be NEGATIVE if both A and B are negative!	*)
-
-IMPLEMENTATION MODULE SuValues;
 
   FROM SYSTEM IMPORT
     ADDRESS, ADR, TSIZE;

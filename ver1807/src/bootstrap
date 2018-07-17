@@ -1,9 +1,11 @@
 #!/bin/sh
 #
-# Christian Maurer   v. 5. August 2012
+# Build Mocka 1807 using default install of Mocka 1208
 
 export MOCKAM2=
 export MOCKALINK=
 
 echo "-info" | /usr/local/m2/bin/m2
 echo p Mocka | /usr/local/m2/bin/m2
+
+# END OF FILE

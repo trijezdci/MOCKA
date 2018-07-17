@@ -1,32 +1,32 @@
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
 %test
 %noIRConsCheck
 %noonthefly
 %LongCost
 
-CODE_GENERATOR_DESCRIPTION  CgMobil;
-(***************************************************************************)
-(*    INTEL 80386/387	Code Generator Spezifikation fuer BEG		   *) 
-(*                                                                         *)
-(*			Studienarbeit					   *)
-(*			Holger Hopp					   *)
-(*									   *)
-(*			Beginn : 27.05.93				   *)
-(*			Stand  : 17.10.96				   *)
-(*									   *)
-(*	COPYRIGHT (C) BY		GMD Forschungsstelle		   *)
-(*					an der Universitaet Karlsruhe	   *)
-(*					Vincenz-Priessnitz-Str. 3	   *)
-(*					76131 Karlsruhe			   *)
-(***************************************************************************)
 
+(* ************************************************************************ *
+ * BEG Code Generator Specification                                         *
+ *                                                                          *
+ * Student Project by Holger Hopp 1995-05-27 ~ 1996-10-17                   *
+ * ************************************************************************ *)
 
-
-(***************************************************************************)
-(*                                                                         *)
-(*           Code Generator Beschreibung MOBIL -> INTEL 80386/387          *)
-(*                                                                         *)
-(***************************************************************************)
-
+CODE_GENERATOR_DESCRIPTION CgMobil;
+ 
+(* MOBIL -> Intel 80386/80387 *)
 
 INTERMEDIATE_REPRESENTATION
 (*************************)

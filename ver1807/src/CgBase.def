@@ -1,15 +1,18 @@
-(******************************************************************************)
-(*                                                                            *)
-(*                             GMD MODULA SYSTEM                              *)
-(*                                                                            *)
-(*                           Copyright (C) 1993 by                            *)
-(*                                                                            *)
-(*            Gesellschaft fuer Mathematik und Datenverarbeitung              *)
-(*              Forschungsstelle an der Universitaet Karlsruhe                *)
-(*                       Vincenz-Priessnitz-Str. 1                            *)
-(*                          D-76131 Karlsruhe 1                               *)
-(*                                                                            *)
-(******************************************************************************)
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
 
 DEFINITION MODULE CgBase;
 
@@ -17,88 +20,96 @@ FROM SYSTEM IMPORT
    ADDRESS;
 
 
-TYPE
-   SysProc =
-      (
-         SysProcHALT,
-         SysProcNewprocess,
-         SysProcTransfer,
-         SysProcCaseError,
-         SysProcReturnError
-      );
-
-   Mode =
-      (
-         UnsignedByte,
-         UnsignedWord,
-         UnsignedLong,
-         SignedByte,
-         SignedWord,
-         SignedLong,
-         FloatShort,
-         FloatLong,
-	 None
-      );
-
-   Relation = 
-      (
-         RelEqual,
-         RelUnequal,
-         RelLess,
-         RelLessOrEqual,
-         RelGreater,
-         RelGreaterOrEqual
-      );
+TYPE SysProc =
+  ( SysProcHALT,
+    SysProcNewprocess,
+    SysProcTransfer,
+    SysProcCaseError,
+    SysProcReturnError );
 
 
-   RelSymb = POINTER TO ARRAY [0..255] OF CHAR;
-
-   Tempo        = LONGINT;
-   DataTempo    = Tempo;
-   AddressTempo = Tempo;
-
-   Label        = RelSymb;
-
-   ModuleIndex  =
-      POINTER TO RECORD
-	 Name    : RelSymb;
-	 Statics : RelSymb;
-	 Extern  : BOOLEAN;
-      END;
-
-   ProcIndex   = POINTER TO ProcRecord;
-   ProcRecord  = RECORD
-	 Extern : BOOLEAN;
-	 IsFunction : BOOLEAN;
-	 Name : RelSymb;
-	 Entry : RelSymb;
-	 Number : SHORTCARD;
-	 Module : ModuleIndex;
-	 Level  : SHORTCARD;
-	 Father : ProcIndex;
-      END;
-
-   StringIndex = RelSymb;
+TYPE Mode =
+  ( UnsignedByte,
+    UnsignedWord,
+    UnsignedLong,
+    SignedByte,
+    SignedWord,
+    SignedLong,
+    FloatShort,
+    FloatLong,
+    None );
 
 
+TYPE Relation = 
+  ( RelEqual,
+    RelUnequal,
+    RelLess,
+    RelLessOrEqual,
+    RelGreater,
+    RelGreaterOrEqual );
 
-TYPE  LabelList = POINTER TO LabelListRecord;
-      LabelListRecord = RECORD
-	 label : Label;
-	 next  : LabelList;
-      END;
 
-VAR   ElfOption : CARDINAL;
+TYPE RelSymb = POINTER TO ARRAY [0..255] OF CHAR;
 
-PROCEDURE MakeRelSymb (VAR  s : ARRAY OF CHAR) : RelSymb;
 
-PROCEDURE GetLabel (VAR lab : Label);
+TYPE Tempo = LONGINT;
 
-PROCEDURE NewSymb () : RelSymb;
+TYPE DataTempo = (* ALIAS OF *) Tempo;
 
-PROCEDURE InitCgBase;
+TYPE AddressTempo = (* ALIAS OF *) Tempo;
+
+
+TYPE Label = RelSymb;
+
+
+TYPE ModuleIndex = POINTER TO RECORD
+  Name,
+  Statics : RelSymb;
+  Extern  : BOOLEAN;
+END; (* ModuleIndex *)
+
+
+TYPE ProcIndex = POINTER TO ProcRecord;
+
+TYPE ProcRecord = RECORD
+  Extern,
+  IsFunction : BOOLEAN;
+  Name,
+  Entry      : RelSymb;
+  Number     : SHORTCARD;
+  Module     : ModuleIndex;
+  Level      : SHORTCARD;
+  Father     : ProcIndex;
+END; (* ProcRecord *)
+
+
+TYPE StringIndex = RelSymb;
+
+
+TYPE LabelList = POINTER TO LabelListRecord;
+  
+TYPE LabelListRecord = RECORD
+  label : Label;
+  next  : LabelList;
+END; (* LabelListRecord *)
+
 
 VAR NullSymb : RelSymb;
 
-END CgBase.
 
+VAR ElfOption : CARDINAL;
+
+
+PROCEDURE MakeRelSymb ( VAR s : ARRAY OF CHAR ) : RelSymb;
+
+
+PROCEDURE GetLabel ( VAR lab : Label );
+
+
+PROCEDURE NewSymb () : RelSymb;
+
+
+PROCEDURE InitCgBase;
+
+
+END CgBase.

@@ -1,33 +1,67 @@
-(******************************************************************************)
-(* Copyright (c) 1988 by GMD Karlruhe, Germany				      *)
-(* Gesellschaft fuer Mathematik und Datenverarbeitung			      *)
-(* (German National Research Center for Computer Science)		      *)
-(* Forschungsstelle fuer Programmstrukturen an Universitaet Karlsruhe	      *)
-(* All rights reserved.							      *)
-(******************************************************************************)
+(*!m2pim+mocka*)
 
-DEFINITION MODULE CgAssOut;
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE CgAssOut; (* TO DO: s/Ass/Asm *)
 (* Fast text output module used to produce Assembler output *)
 
 
-PROCEDURE    AssOpen (VAR name : ARRAY OF CHAR);
-PROCEDURE    AssClose;
+(* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Isn't this ironic?
+   
+   The ISO Modula-2 working group changed the designated identifier for the
+   smalles addressable unit from SAU to LOC, because the German delegation
+   had objected on the grounds that 'sau' was offensive. In German 'sau'
+   means 'sow' and it is used as a derogative. So far so good.
+   
+   Yet here we have the sources of the MOCKA compiler, written by some of
+   the members of that German delegation, with a module identifier and a
+   whole bunch of procedures prefixed with 'Ass'.
+   
+   Oh the hypocrisy. You couldn't make this up.
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ *)
+   
 
-PROCEDURE    flush; (* ++ hh 09/92 wg. langer stabs ++ *)
+PROCEDURE AssOpen ( VAR name : ARRAY OF CHAR );
+
+
+PROCEDURE AssClose;
+
+
+PROCEDURE flush; (* why lowercase when all other procs aren't? *)
 (* emits buffer *)
 
-PROCEDURE    AssLn;
-(*  generate end of line *)
-(*  a line may at most contain 128 characters *)
 
-PROCEDURE    AssChar    (c : CHAR);
-PROCEDURE    AssHString (VAR s : ARRAY OF CHAR);
-PROCEDURE    AssString  (VAR s : ARRAY OF CHAR);
-(*  generate string *)
-(*  GenHString the whole string is output, while GenString *)
-(*  Outputs until the first 0c character                   *)
+PROCEDURE AssLn;
+(* generate end of line *)
+(* a line may at most contain 128 characters *)
 
-PROCEDURE    AssInt    (i : INTEGER);
-(*  generate Integer *)
+
+PROCEDURE AssChar ( c : CHAR );
+
+
+PROCEDURE AssString ( VAR s : ARRAY OF CHAR );
+(* generate string *)
+(* GenHString the whole string is output, while GenString *)
+(* Outputs until the first 0c character                   *)
+
+
+PROCEDURE AssHString ( VAR s : ARRAY OF CHAR );
+
+
+PROCEDURE AssInt ( i : INTEGER );
+(* generate Integer *)
 
 END CgAssOut.
