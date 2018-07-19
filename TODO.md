@@ -13,6 +13,8 @@ Status July 2018
 
 (5) add parser for new configuration file /etc/mocka.conf
 
+(6) change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
+
 ### Command Line Options
 
 `--elf`     for ELF object file output (default)
