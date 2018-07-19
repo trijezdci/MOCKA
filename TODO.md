@@ -13,7 +13,9 @@ Status July 2018
 
 (5) add parser for new configuration file /etc/mocka.conf
 
-(6) change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
+(6) add compiler switch to enable/disable MOCKA specific language extensions
+
+(7) change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
 
 ### Command Line Options
 
