@@ -1,6 +1,8 @@
 ## TO DO List for MOCKA Modula-2 Compiler
 Status July 2018
 
+(0) general (and likely ongoing) clean up of the source code
+
 (1) rename modules and procedures prefixed with 'Ass' to prefix 'Asm'
 
 (2) remove shell from compiler and make it a standalone program
