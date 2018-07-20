@@ -27,12 +27,15 @@ Copyright (C) 2001-2018 by Fraunhofer. All rights reserved.
 
 ### Version
 
+```
 >> -version
 Mocka 1807
 >>
+```
 
 ### Default Paths
 
+```
 >> -info
 Compiler options in effect:
  noindex, norange, blip, noelf, noS, g, gc, ge, nostatic
@@ -64,3 +67,4 @@ commands:
  p   compile and link module
  q   quit Mocka shell
 >> 
+```
