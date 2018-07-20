@@ -5,7 +5,7 @@
 * Added a version command and option
 * Updated copyright notice in all source files
 * Mocka now prints a banner with copyright info
-* Changed default paths to comply with *unix conventions
+* Changed default paths to comply with *nix conventions
 * Fixed some minor glitches
 * Renamed main program to Mocka
 * Changed prefix of Mc* modules to Mocka
