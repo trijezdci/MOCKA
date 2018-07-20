@@ -45,10 +45,12 @@ List Script         : /usr/local/bin/mocka/list
 Edit Script         : /usr/local/bin/mocka/edit
 Link Script         : /usr/local/bin/mocka/link
 Assembler Script    : /usr/local/bin/mocka/asm
->> 
+>>
+```
 
 ### Help Screen
 
+```
 >> -help
 usage:
  Mocka [options] [commands] module
