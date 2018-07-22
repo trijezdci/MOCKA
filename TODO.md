@@ -53,6 +53,7 @@ Differences between ELF and Mach-O:
 * Mach-O labels are not prefixed
 * ELF procedures are not prefixed
 * Mach-O procedures are prefixed by a lowline, example `_Foo:`
+* Mach-O procedures are 16 byte aligned (use wrappers when calling extern)
 
 To Do: find the location in Emit.mod where labels and procedure labels are written,
 add a flag for Mach-O versus Elf, emit labels according to the value of said flag.
