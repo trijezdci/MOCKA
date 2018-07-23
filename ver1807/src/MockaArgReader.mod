@@ -13,90 +13,99 @@
  *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
  *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
  *                                                                          *
- * File 'MockaArgLexer.def' Copyright (C) 2018, Benjamin Kowarsch           *
+ * File 'MockaArgReader.mod' Copyright (C) 2018, Benjamin Kowarsch          *
  * ------------------------------------------------------------------------ *)
 
-DEFINITION MODULE MockaArgLexer;
+IMPLEMENTATION MODULE MockaArgReader;
 
-(* Command Line Argument Lexer *)
+(* Command Line Argument Reader *)
+
+
+IMPORT (* Mockalib *) Arguments;
 
 
 (* ------------------------------------------------------------------------
- * Argument tokens
+ * Argument string terminator
  * ------------------------------------------------------------------------ *)
 
-TYPE Token = (
+CONST NUL = CHR(0);
 
-  (* invalid argument *)
-  
-  Invalid,
-
-  (* information options *)
-  
-  Help,         (* --help *)
-  Version,      (* --version *)
-  Copyright,    (* --copyright *)
-  
-  (* product options *)
-  
-  KeepAsm,      (* --keep-asm *)
-  PurgeAsm,     (* --purge-asm *)
-  Build,        (* --build *)
-  NoBuild,      (* --no-build *)
-  
-  (* source file name *)
-  
-  SourceFile,
-  
-  (* diagnostic options *)
-  
-  Verbose,      (* --verbose *)
-  DebugInfo,    (* --debug-info *)
-  NoDebugInfo,  (* --no-debug-info *)
-  ShowSettings, (* --show-settings *)
-  
-  (* end of input sentinel *)
-  
-  EndOfInput );
-  
 
 (* ------------------------------------------------------------------------
- * Length of longest argument string
+ * Argument string pointer type
  * ------------------------------------------------------------------------ *)
 
-CONST MaxArgStrLen = 15;
+TYPE ArgPtr = POINTER TO ArgStr;
 
-  
+
 (* ------------------------------------------------------------------------
- * function MockaArgLexer.nextToken()
+ * Argument string pointer table type
+ * ------------------------------------------------------------------------ *)
+
+TYPE ArgTable = POINTER TO ARRAY [0 .. MaxArgs] OF ArgPtr;
+
+
+(* ------------------------------------------------------------------------
+ * Argument count obtained from OS environment
+ * ------------------------------------------------------------------------ *)
+
+VAR argc : SHORTCARD;
+
+
+(* ------------------------------------------------------------------------
+ * Argument table populated from OS environment
+ * ------------------------------------------------------------------------ *)
+
+VAR argv : ArgTable;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgReader.argCount()
  * ------------------------------------------------------------------------
- * Reads and consumes the next command line argument and returns its token.
+ * Returns the number of available command line arguments.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE nextToken : Token;
+PROCEDURE argCount : CARDINAL;
+BEGIN
+  RETURN VAL(CARDINAL, argc)
+END argCount;
 
 
 (* ------------------------------------------------------------------------
- * procedure MockaArgLexer.GetLastArg(lastArg)
+ * proedure MockaArgReader.GetArgN()
  * ------------------------------------------------------------------------
- * Passes the argument string of the last consumed argument in 'lastArg'.
- * If the end of input token has been returned by a prior call to function
- * nextToken(), or if the capacity of 'lastArg' is less than MaxArgStrLen,
- * an empty string is passed instead.
+ * Passes the n-th command line argument in 'arg'.  If 'n' exceeds the
+ * number of available arguments, an empty string is passed back instead.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE GetLastArg ( VAR lastArg : ARRAY OF CHAR );
+PROCEDURE GetArgN ( n : CARDINAL; VAR arg : ARRAY OF CHAR );
+
+VAR
+  ch : CHAR;
+  index : CARDINAL;
+  
+BEGIN
+  (* assert n does not exceed argument count *)
+  IF n >= VAL(CARDINAL, argc) THEN
+    arg := NUL;
+    RETURN
+  END; (* IF *)
+  
+  (* copy chars from n-th entry in argument table to arg *)
+  index := 0;
+  REPEAT
+    ch := argv^[n]^[index];
+    arg[index] := ch;
+    index := index + 1
+  UNTIL (ch = NUL) OR (index > HIGH(arg));
+  
+  (* assert final char is terminator *)
+  IF ch # NUL THEN
+    arg[HIGH(arg)] := NUL
+  END (* IF *)
+END GetArgN;
 
 
-(* ------------------------------------------------------------------------
- * procedure MockaArgLexer.GetArgStrForToken(argStr, token)
- * ------------------------------------------------------------------------
- * Passes the argument string for 'token' in 'argStr'.  If any of Invalid,
- * SourceFile or EndOfInput is passed in for 'token',  or if the capacity
- * of 'argStr' is less than MaxArgStrLen, an empty string is passed instead.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE GetArgStrForToken ( VAR argStr : ARRAY OF CHAR; token : Token );
-
-
-END MockaArgLexer.
+BEGIN (* MockaArgReader *)
+  Arguments.GetArgs(argc, argv)
+END MockaArgReader.

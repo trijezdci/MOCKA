@@ -21,6 +21,9 @@ IMPLEMMENTATION MODULE MockaArgLexer;
 (* Command Line Argument Lexer *)
 
 
+IMPORT MockaArgReader;
+
+
 (* ------------------------------------------------------------------------
  * Argument strings
  * ------------------------------------------------------------------------ *)
@@ -40,13 +43,25 @@ CONST
   ArgStrNoDebugInfo = "--no-debug-info";
   ArgStrShowSettings = "--show-settings";
   
-
+  ArgStrLibPath = "--lib-path";
+  ArgStrWorkingDir = "--working-dir";
+  
+  
+(* ------------------------------------------------------------------------
+ * Character constants
+ * ------------------------------------------------------------------------ *)
+  
+  NUL = CHR(0);
+  TAB = CHR(9);
+  SPACE = CHR(32);
+  NEWLINE = CHR(10);
+  
+  
 (* ------------------------------------------------------------------------
  * Lexeme of last consumed argument
  * ------------------------------------------------------------------------ *)
 
-VAR
-  lastLexeme : ARRAY [0..MaxArgStrLen] OF CHAR;
+VAR lastLexeme : ARRAY [0..MaxArgStrLen] OF CHAR;
   
   
 (* ------------------------------------------------------------------------
@@ -72,7 +87,7 @@ BEGIN
   
   IF eof(args) THEN
     token := EndOfInput;
-    lastLexeme := CHR(0)
+    lastLexeme := NUL;
     
   ELSE
     CASE next OF
@@ -99,7 +114,7 @@ BEGIN
     
     ELSE (* invalid argument *)
       token := Invalid;
-      lastLexeme := CHR(0)
+      lastLexeme := NUL;
     END (* CASE *)
   END (* IF *)
   
@@ -121,7 +136,7 @@ END nextToken;
 BEGIN
   (* assert that the capacity of lastArg is at least MaxArgStrLen *)
   IF HIGH(lastArg) < MaxArgStrLen THEN
-    lastArg := CHR(0);
+    lastArg := NUL;
     RETURN
   END; (* IF *)
   
@@ -142,7 +157,7 @@ PROCEDURE GetArgStrForToken ( VAR argStr : ARRAY OF CHAR; token : Token );
 BEGIN
   (* assert that the capacity of argStr is at least MaxArgStrLen *)
   IF HIGH(argStr) < MaxArgStrLen THEN
-    argStr := CHR(0);
+    argStr := NUL;
     RETURN
   END; (* IF *)
   
@@ -181,7 +196,7 @@ BEGIN
     argStr := ArgStrShowSettings
   
   ELSE (* any other token yields empty string *)
-    argStr := CHR(0)
+    argStr := NUL
   END (* CASE *)  
 END GetArgStrForToken;
 
@@ -201,7 +216,8 @@ VAR
   
 BEGIN
   (* copy lookahead to lexeme *)
-  lexeme[0] := next; index := 1;
+  lexeme[0] := next;
+  index := 1;
   
   (* consume first prefix character *)
   next := consumeChar(args);
@@ -209,8 +225,8 @@ BEGIN
   (* consume second prefix character *)
   IF next = "-" THEN
     (* copy char to lexeme *)
-    lexeme[index] := next;
-    index := index + 1;
+    lexeme[1] := next;
+    index := 2;
     
     (* consume *)
     next := consumeChar(args)
@@ -227,7 +243,7 @@ BEGIN
   END; (* WHILE *)
   
   (* terminate lexeme *)
-  lexeme[index] := CHR(0);
+  lexeme[index] := NUL;
   
   (* pass token for lexeme *)
   token := optionTokenForLexeme(lexeme)
@@ -372,7 +388,7 @@ END GetAbsolutePath;
  * token and lexeme. Passes the new lookahead character back in 'next'.
  * ------------------------------------------------------------------------ *)
 
- PROCEDURE GetHomeDirPath
+PROCEDURE GetHomeDirPath
   ( VAR next : CHAR; VAR token : Token; VAR lexeme : ARRAY OF CHAR );
 
 BEGIN
@@ -380,6 +396,6 @@ BEGIN
 END GetHomeDirPath;
 
   
-BEGIN
-  lastLexeme := CHR(0)
+BEGIN (* MockaArgLexer *)
+  lastLexeme := NUL
 END MockaArgLexer.
