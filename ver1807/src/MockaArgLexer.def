@@ -1,0 +1,106 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ *                                                                          *
+ * File 'MockaArgLexer.def' Copyright (C) 2018, Benjamin Kowarsch           *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE MockaArgLexer;
+
+(* Command Line Argument Lexer *)
+
+
+(* ------------------------------------------------------------------------
+ * Argument tokens
+ * ------------------------------------------------------------------------ *)
+
+TYPE Token = (
+
+  (* invalid argument *)
+  
+  Invalid,
+
+  (* information options *)
+  
+  Help,         (* --help *)
+  Version,      (* --version *)
+  Copyright,    (* --copyright *)
+  
+  (* product options *)
+  
+  KeepAsm,      (* --keep-asm *)
+  PurgeAsm,     (* --purge-asm *)
+  Build,        (* --build *)
+  NoBuild,      (* --no-build *)
+  
+  (* source file name *)
+  
+  SourceFile,
+  
+  (* diagnostic options *)
+  
+  Verbose,      (* --verbose *)
+  DebugInfo,    (* --debug-info *)
+  NoDebugInfo,  (* --no-debug-info *)
+  ShowSettings, (* --show-settings *)
+  
+  (* end of input sentinel *)
+  
+  EndOfInput );
+  
+
+(* ------------------------------------------------------------------------
+ * Length of longest argument string
+ * ------------------------------------------------------------------------ *)
+
+CONST MaxArgStrLen = 15;
+
+  
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.nextToken()
+ * ------------------------------------------------------------------------
+ * Reads and consumes the next command line argument and returns its token.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE nextToken : Token;
+(* Reads and consumes the next command line argument and returns its token. *)
+
+
+(* ------------------------------------------------------------------------
+ * procedure MockaArgLexer.GetLastArg(lastArg)
+ * ------------------------------------------------------------------------
+ * Passes the argument string of the last consumed argument in 'lastArg'.
+ * If the end of input token has been returned by a prior call to function
+ * nextToken(), or if the capacity of 'lastArg' is less than MaxArgStrLen,
+ * an empty string is passed instead.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE GetLastArg ( VAR lastArg : ARRAY OF CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * procedure MockaArgLexer.GetArgStrForToken(argStr, token)
+ * ------------------------------------------------------------------------
+ * Passes the argument string for 'token' in 'argStr'.  If any of Invalid,
+ * SourceFile or EndOfInput is passed in for 'token',  or if the capacity
+ * of 'argStr' is less than MaxArgStrLen, an empty string is passed instead.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE GetArgStrForToken ( VAR argStr : ARRAY OF CHAR; token : Token );
+(* Passes the argument string for 'token' in 'argStr'.  If any of Invalid,
+   SourceFile or EndOfInput is passed in for 'token', or if the capacity of
+   'argStr' is less than MaxArgStrLen, an empty string is passed instead. *)
+
+
+END MockaArgLexer.
