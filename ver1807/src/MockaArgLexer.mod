@@ -37,14 +37,16 @@ CONST
   ArgStrPurgeAsm = "--purge-asm";
   ArgStrBuild = "--build";
   ArgStrNoBuild = "--no-build";
+  ArgStrStatic = "--static";
+  ArgStrNoStatic = "--no-static";
   
+  ArgStrDebug = "--debug";
+  ArgStrNoDebug = "--no-debug";
   ArgStrVerbose = "--verbose";
-  ArgStrDebugInfo = "--debug-info";
-  ArgStrNoDebugInfo = "--no-debug-info";
   ArgStrShowSettings = "--show-settings";
   
   ArgStrLibPath = "--lib-path";
-  ArgStrWorkingDir = "--working-dir";
+  ArgStrWorkDir = "--work-dir";
   
   
 (* ------------------------------------------------------------------------
@@ -183,18 +185,30 @@ BEGIN
   | NoBuild :
     argStr := ArgStrNoBuild
     
+  | Static :
+    argStr := ArgStrStatic
+    
+  | NoStatic :
+    argStr := ArgStrNoStatic
+    
+  | Debug :
+    argStr := ArgStrDebug
+    
+  | NoDebug :
+    argStr := ArgStrNoDebug
+    
   | Verbose :
     argStr := ArgStrVerbose
-    
-  | DebugInfo :
-    argStr := ArgStrDebugInfo
-    
-  | NoDebugInfo :
-    argStr := ArgStrNoDebugInfo
     
   | ShowSettings :
     argStr := ArgStrShowSettings
   
+  | LibPath :
+    argStr := ArgStrLibPath
+    
+  | WorkDir :
+    argStr := ArgStrWorkDir
+    
   ELSE (* any other token yields empty string *)
     argStr := NUL
   END (* CASE *)  
@@ -271,64 +285,79 @@ BEGIN
       RETURN Help
     END (* IF *)
       
-  | 7 : (* --build *)
-    IF strMatches(lexeme, ArgStrBuild) THEN
-      RETURN Build
+  | 7 : (* --build, --debug *)
+    CASE lexeme[2] OF
+    | "b" : (* --build *)
+      IF strMatches(lexeme, ArgStrBuild) THEN
+        RETURN Build
+      END (* IF *)
+    | "d" : (* --debug *)
+      IF strMatches(lexeme, ArgStrDebug) THEN
+        RETURN Debug
+      END (* IF *)
+    END (* CASE *)
+    
+  | 8 : (* --static *)
+    IF strMatches(lexeme, ArgStrStatic) THEN
+      RETURN Static
     END (* IF *)
-  
-  
+      
   | 9 : (* --version, --verbose *)
     CASE lexeme[5] OF
+    | "b" : (* --verbose *)
+      IF strMatches(lexeme, ArgStrVerbose) THEN
+        RETURN Verbose
+      END (* IF *)
     | "s" : (* --version *)
       IF strMatches(lexeme, ArgStrVersion) THEN
         RETURN Version
       END (* IF *)
-    | "b" : (* --verbose *)
-      IF strMatches(lexeme, ArgStrVerbose THEN
-        RETURN Verbose
-      END (* IF *)
     END (* CASE *)
     
-  | 10 : (* --keep-asm, --no-build *)
-    CASE lexeme[3] OF
-    | "k" : (* --keep-asm *)
+  | 10 : (* --keep-asm, --no-build, --no-debug, --lib-path, --work-dir *)
+    CASE lexeme[9] OF
+    | "d" : (* --no-build *)
+      IF strMatches(lexeme, ArgStrNoBuild) THEN
+        RETURN NoBuild
+      END (* IF *)
+    | "g" : (* --no-debug *)
+      IF strMatches(lexeme, ArgStrNoDebug) THEN
+        RETURN NoDebug
+      END (* IF *)
+    | "h" : (* --lib-path *)
+      IF strMatches(lexeme, ArgStrLibPath) THEN
+        RETURN LibPath
+      END (* IF *)
+    | "m" : (* --keep-asm *)
       IF strMatches(lexeme, ArgStrKeepAsm) THEN
         RETURN KeepAsm
       END (* IF *)
-    | "n" : (* --no-build *)
-      IF strMatches(lexeme, ArgStrNoBuild THEN
-        RETURN NoBuild
+    | "r" : (* --work-dir *)
+      IF strMatches(lexeme, ArgStrWorkDir) THEN
+        RETURN WorkDir
       END (* IF *)
     END (* CASE *)
-  
-  | 11 : (* --copyright, --purge-asm *)
+    
+  | 11 : (* --copyright, --no-static, --purge-asm *)
     CASE lexeme[3] OF
     | "c" : (* --copyright *)
       IF strMatches(lexeme, ArgStrCopyright) THEN
         RETURN Copyright
       END (* IF *)
+    | "n" : (* --no-static *)
+      IF strMatches(lexeme, ArgStrNoStatic) THEN
+        RETURN NoStatic
+      END (* IF *)
     | "p" : (* --purge-asm *)
-      IF strMatches(lexeme, ArgStrPurgeAsm THEN
+      IF strMatches(lexeme, ArgStrPurgeAsm) THEN
         RETURN PurgeAsm
       END (* IF *)
     END (* CASE *)
-  
-  | 12 : (* --debug-info *)
-    IF strMatches(lexeme, ArgStrDebugInfo) THEN
-      RETURN DebugInfo
+    
+  | 15 : (* --show-settings *)
+    IF strMatches(lexeme, ArgStrShowSettings) THEN
+      RETURN ShowSettings
     END (* IF *)
-  
-  | 15 : (* --no-debug-info, --show-settings *)
-    CASE lexeme[3] OF
-    | "n" : (* --no-debug-info *)
-      IF strMatches(lexeme, ArgStrNoDebugInfo) THEN
-        RETURN NoDebugInfo
-      END (* IF *)
-    | "s" : (* --show-settings *)
-      IF strMatches(lexeme, ArgStrShowSettings THEN
-        RETURN ShowSettings
-      END (* IF *)
-    END (* CASE *)
   
   ELSE (* invalid option *)
     RETURN Invalid

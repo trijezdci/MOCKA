@@ -43,6 +43,8 @@ TYPE Token = (
   PurgeAsm,     (* --purge-asm *)
   Build,        (* --build *)
   NoBuild,      (* --no-build *)
+  Static,       (* --static *)
+  NoStatic,     (* --no-static *)
   
   (* source file name *)
   
@@ -54,6 +56,11 @@ TYPE Token = (
   DebugInfo,    (* --debug-info *)
   NoDebugInfo,  (* --no-debug-info *)
   ShowSettings, (* --show-settings *)
+  
+  (* path options *)
+  
+  LibPath,      (* --lib-path *)
+  WorkDir,      (* --work-dir *)
   
   (* end of input sentinel *)
   
