@@ -33,6 +33,11 @@ CONST
   ArgStrVersion = "--version";
   ArgStrCopyright = "--copyright";
   
+  ArgStrIndexChecks = "--index-checks";
+  ArgStrNoIndexChecks = "--no-index-checks";
+  ArgStrRangeChecks = "--range-checks";
+  ArgStrNoRangeChecks = "--no-range-checks";
+  
   ArgStrKeepAsm = "--keep-asm";
   ArgStrPurgeAsm = "--purge-asm";
   ArgStrBuild = "--build";
@@ -172,6 +177,18 @@ BEGIN
     
   | Copyright :
     argStr := ArgStrCopyright
+    
+  | IndexChecks :
+    argStr := ArgStrIndexChecks
+    
+  | NoIndexChecks :
+    argStr := ArgStrNoIndexChecks
+    
+  | RangeChecks :
+    argStr := ArgStrRangeChecks
+    
+  | NoRangeChecks :
+    argStr := ArgStrNoRangeChecks
     
   | KeepAsm :
     argStr := ArgStrKeepAsm
@@ -354,15 +371,109 @@ BEGIN
       END (* IF *)
     END (* CASE *)
     
+  | 14 : (* --index-checks, --range-checks *)
+    CASE lexeme[2] OF
+    | "i" : (* --index-checks *)
+      IF strMatches(lexeme, ArgStrIndexChecks) THEN
+        RETURN IndexChecks
+      END (* IF *)
+    | "r" : (* --range-checks *)
+      IF strMatches(lexeme, ArgStrRangeChecks) THEN
+        RETURN RangeChecks
+      END (* IF *)
+    END (* CASE *)
+    
   | 15 : (* --show-settings *)
     IF strMatches(lexeme, ArgStrShowSettings) THEN
       RETURN ShowSettings
     END (* IF *)
   
+  | 17 : (* --no-index-checks, --no-range-checks *)
+    CASE lexeme[5] OF
+    | "i" : (* --no-index-checks *)
+      IF strMatches(lexeme, ArgStrNoIndexChecks) THEN
+        RETURN NoIndexChecks
+      END (* IF *)
+    | "r" : (* --no-range-checks *)
+      IF strMatches(lexeme, ArgStrNoRangeChecks) THEN
+        RETURN NoRangeChecks
+      END (* IF *)
+    END (* CASE *)
+    
   ELSE (* invalid option *)
     RETURN Invalid
   END (* CASE *)
 END tokenForLexeme;
+
+
+(* ------------------------------------------------------------------------
+ * private function strLen(str)
+ * ------------------------------------------------------------------------
+ * Returns the length of 'str'.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE strLen ( (*CONST*) VAR str : ARRAY OF CHAR ) : CARDINAL;
+
+VAR
+  index : CARDINAL;
+
+BEGIN
+  index := 0;
+  
+  (* search for ASCII NUL *)
+  REPEAT
+    IF str[index] = NUL THEN
+      EXIT
+    ELSE
+      index := index + 1
+    END (* IF *)
+  UNTIL index > HIGH(str);
+  
+  (* index contains length *)
+  RETURN index
+END strLen;
+
+
+(* ------------------------------------------------------------------------
+ * private function strMatches(s1, s2)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 's1' matches 's2', otherwise FALSE.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE strMatches ( (*CONST*) VAR s1, s2 : ARRAY OF CHAR ) : BOOLEAN;
+
+VAR
+  ch1, ch2 : CHAR;
+  index : CARDINAL;
+  
+BEGIN
+  index := 0;
+  
+  (* search for mismatching character or ASCII NUL *)
+  REPEAT
+    ch1 := s1[index]; ch2 := s2[index];
+    IF ch1 # ch2 THEN
+      (* mismatch *)
+      RETURN FALSE
+      
+    ELSIF ch1 = NUL THEN
+      (* end of string reached, all characters matched *)
+      RETURN TRUE
+    
+    ELSE (* end of string not reached, continue *)
+      index := index + 1
+    END (* IF *)
+  UNTIL (index > HIGH(s1)) OR (index > HIGH(s2));
+  
+  (* check for possibly unterminated string (PIM3) *)
+  IF HIGH(s1) = HIGH(s2) THEN
+    (* all characters matched *)
+    RETURN TRUE
+  ELSE
+    (* length mismatch *)
+    RETURN FALSE
+  END (* IF *)
+END strMatches;
 
 
 (* ------------------------------------------------------------------------
