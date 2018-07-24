@@ -302,7 +302,7 @@ BEGIN
       RETURN Static
     END (* IF *)
       
-  | 9 : (* --version, --verbose *)
+  | 9 : (* --verbose, --version *)
     CASE lexeme[5] OF
     | "b" : (* --verbose *)
       IF strMatches(lexeme, ArgStrVerbose) THEN
@@ -314,7 +314,7 @@ BEGIN
       END (* IF *)
     END (* CASE *)
     
-  | 10 : (* --keep-asm, --no-build, --no-debug, --lib-path, --work-dir *)
+  | 10 : (* --no-build, --no-debug, --lib-path, --keep-asm, --work-dir *)
     CASE lexeme[9] OF
     | "d" : (* --no-build *)
       IF strMatches(lexeme, ArgStrNoBuild) THEN
@@ -339,7 +339,7 @@ BEGIN
     END (* CASE *)
     
   | 11 : (* --copyright, --no-static, --purge-asm *)
-    CASE lexeme[3] OF
+    CASE lexeme[2] OF
     | "c" : (* --copyright *)
       IF strMatches(lexeme, ArgStrCopyright) THEN
         RETURN Copyright
