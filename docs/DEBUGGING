@@ -1,0 +1,84 @@
+README for the -g option of the Mocka compiler
+==============================================
+
+The gdb (and other) debuggers are written for debugging C and not MODULA-2.
+The support of debugging MODULA-2 is small and nearly not documented. For
+debugging Mocka you should know the following:
+
+1. Procedures and Modules
+-------------------------
+The Debugger must distinguish Procedures with the same Names, so the Procedures
+are named as modulename_procedurename. For nested Procedures you need more
+underscores, e.g.
+
+IMPLEMENTATION MODULE one;
+MODULE two;
+PROCEDURE A;
+PROCEDURE B;
+...
+END B;
+END A;
+END two;
+END one.
+
+to break the procedure B use
+(gdb) break one_two_A_B
+to break the initialization of module one use
+(gdb) break one
+
+2. Constants
+------------
+All constants are interpreted global in the debugger also if they were
+declared local. If you get problems with that, you can switch off the
+debugging of constants with the -nogc option. You cannot debug string constants.
+If you use the dbx debugger, you must use -nogc, because dbx does not 
+understand the constant information.
+
+3. Variables and Params
+-----------------------
+- local variables and params
+no problems, see the notes for data types under 4.
+
+- global variables and params
+you cannot read the variables declared in upper procedures directly. You must
+use the 'up' and 'down' commands of the debugger to read.
+
+- static variables
+Variables declared in the module head are put together in one variable named
+modulename_s. You can read the static variables as a field in a record:
+(gdb) p modulename_s.variable
+
+4. Data Types
+-------------
+Note the following:
+
+- Open Arrays
+Open Arrays are structs with the two components 'start' (start address) and
+'length' (length of the array).
+
+- Enumerations and BOOLEANs
+Enumerations and BOOLEANs are printed by their name (e.g. FALSE) if the
+-ge option is set. Some gdb versions (4.14, 4.15, 4.15.1) seg faults if
+enumerations are used. This gdb bug is fixed in version 4.16.
+You can switch off producing debugging symbols for enumerations with
+the -noge option. In this case enumerations and BOOLEANs are printed
+as integers (0=FALSE, 1=TRUE).
+
+- Records
+Record fields are printed in the wrong order.
+
+- Sets, BITSET
+They are declared as integers. Use the binary (octal, hexadecimal) format to
+read the bits.
+
+- Procedure types
+treated all as void procedure types.
+
+5. WITH - construction
+----------------------
+The debugger has no information of the with construction. So you must use the
+whole name of a variable.
+
+6. Bugs
+-------
+Please report Bugs, etc. to modula@ipd.info.uni-karlsruhe.de
