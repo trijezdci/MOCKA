@@ -33,6 +33,13 @@ CONST BufSize = 32*1024;
 
 
 (* ------------------------------------------------------------------------
+ * High water mark
+ * ------------------------------------------------------------------------ *)
+
+CONST HighWaterMark = BufSize - 130;
+
+
+(* ------------------------------------------------------------------------
  * Character constants
  * ------------------------------------------------------------------------ *)
 
@@ -237,7 +244,7 @@ BEGIN
 
   ELSE
     (* write buffer[0 .. bufIndex] to file *)
-    BasicIO.Write(file, ADR(buffer), bufIndex);
+    BasicIO.Write(file, SYSTEM.ADR(buffer), bufIndex);
     IF BasicIO.DONE THEN
       bufIndex := 0;
       status := Success
