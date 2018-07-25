@@ -38,6 +38,8 @@ CONST
   ArgStrRangeChecks = "--range-checks";
   ArgStrNoRangeChecks = "--no-range-checks";
   
+  ArgStrElf = "--elf";
+  ArgStrMachO = "--mach-o";
   ArgStrKeepAsm = "--keep-asm";
   ArgStrPurgeAsm = "--purge-asm";
   ArgStrBuild = "--build";
