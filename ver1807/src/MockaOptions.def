@@ -1,0 +1,77 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ *                                                                          *
+ * File 'MockaOptions.def' Copyright (C) 2018, Benjamin Kowarsch            *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE MockaOptions;
+
+(* Setting Compiler Options *)
+
+
+(* ------------------------------------------------------------------------
+ * Available options
+ * ------------------------------------------------------------------------ *)
+
+TYPE Option =
+  ( Invalid,
+    Elf,          (* --elf *)
+    MachO,        (* --mach-o *)
+    IndexChecks,  (* --index-checks, --no-index-checks *)
+    RangeChecks,  (* --range-checks, --no-range-checks *)
+    KeepAsm,      (* --keep-asm, --purge-asm *)
+    Debug,        (* --debug, --no-debug *)
+    Build,        (* --build, --no-build *)
+    Static,       (* --static, --no-static *)
+    Verbose );    (* --verbose *)
+
+
+(* ------------------------------------------------------------------------
+ * Default object format
+ * ------------------------------------------------------------------------ *)
+
+CONST DefaultObjFormat = Elf; (* Elf or MachO *)
+
+
+(* ------------------------------------------------------------------------
+ * procedure MockaOptions.SetToDefaults
+ * ------------------------------------------------------------------------
+ * Sets all compiler options to their default values.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE SetToDefaults;
+
+
+(* ------------------------------------------------------------------------
+ * procedure MockaOptions.SetValue(option, value)
+ * ------------------------------------------------------------------------
+ * Sets compiler option 'option' to 'value'.  A value of TRUE enables,
+ * and a value of FALSE disables an option.  Options Elf and MachO are
+ * mutually exclusive.  Enabling Elf disables MachO and vice versa.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE SetValue ( option : Option; value : BOOLEAN );
+
+
+(* ------------------------------------------------------------------------
+ * function MockaOptions.enabled(option)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'option' is enabled, otherwise FALSE.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE enabled ( option : Option ) : BOOLEAN;
+
+
+END MockaOptions.
