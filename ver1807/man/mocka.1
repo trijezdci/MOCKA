@@ -1,0 +1,291 @@
+.TH Mocka 1 "Fraunhofer Society"
+.SH NAME
+mocka \- MOCKA Modula-2 Compiler System
+.SH SYNOPSIS
+\fBmc \fR
+[\fB-s\fR \fImodule\fR | \fB-c\fR \fImodule\fR | \fB-p\fR \fImodule\fR]
+.PP
+[\fB-d\fR \fIdir\fR] ...
+[\fB-index\fR]
+[\fB-noindex\fR]
+[\fB-range\fR]
+[\fB-norange\fR]
+[\fB-static\fR]
+[\fB-nostatic\fR]
+[\fB-elf\fR]
+[\fB-noelf\fR]
+[\fB-g\fR]
+[\fB-nog\fR]
+[\fB-gc\fR]
+[\fB-nogc\fR]
+[\fB-ge\fR]
+[\fB-noge\fR]
+[\fB-S\fR]
+[\fB-noS\fR]
+.PP
+[\fB-D\fR \fIdirectory\fR]
+[\fB-link\fR \fIscript\fR]
+[\fB-edit\fR \fIscript\fR]
+[\fB-list\fR \fIscript\fR]
+[\fB-asm\fR \fIscript\fR]
+[\fB-syslib\fR \fIdir\fR]
+.SH DESCRIPTION
+.I mocka
+is used to compile and link programs written in Modula-2 as defined in Wirth's 4th edition of "Programming in Modula-2" (aka PIM4).
+.PP
+.B "mocka -s"
+.I module
+translates a definition module
+.I module
+into a symbol file.
+This must be present when the corresponding implementation module
+.I module
+or a file importing
+.I module 
+is compiled.
+.PP
+.B "mocka -c"
+.I module
+translates a program or implementation module
+.I module
+into an assembly code file.
+This must be present when a program containing \fImodule\fR is generated.
+.PP
+.B "mocka -p"
+.I module
+creates an executable program for module \fImodule\fR.
+.PP
+If none of the options
+.B -s
+,
+.B -c
+,
+.B -p
+is specified,
+.I mocka
+enters \fIsession mode\fR.
+.PP
+In this mode the user need not worry about
+consistent module configurations
+and correct compilation order.
+Required compilations are triggered automatically. 
+They are based on a dependency graph
+which is derived from the sources and
+updated when necessary.
+.PP
+Session mode also simplifies the correction of errors.
+If an error is detected a listing is created and the editor
+is invoked automatically.
+Errors may be corrected in the listing.
+After leaving the editor the listing (without the error messages)
+is written back to the source file.
+.SH OPTIONS
+.IP "\fB-s\fR \fImodule\fR" 20
+Create symbol file for \fImodule\fR,
+i.e. compile the definition module \fImodule\fR
+in file \fImodule\fR.def .
+.IP "\fB-c\fR \fImodule\fR" 20
+Create code file for \fImodule\fR,
+i.e. compile the program or implementation \fImodule\fR
+in file \fImodule\fR.mod .
+.IP "\fB-p\fR \fImodule\fR" 20
+Create program \fImodule\fR,
+i.e. link object files for
+module \fImodule\fR
+and all (transitively) imported modules.
+.IP "\fB-d\fR \fIdir\fR" 20
+Allow import from modules in library \fIdir\fR.
+This options may be repeated.
+Libraries (directories containing compiled modules)
+are inspected in the order specified.
+Finally the system library is inspected.
+.IP "\fB-index\fR (\fB-noindex\fR)" 20
+Generate (don't generate) code for index checks.
+.IP "\fB-range\fR (\fB-norange\fR)" 20
+Generate (don't generate) code for range checks.
+.IP "\fB-static\fR (\fB-nostatic\fR)" 20
+Do (or don't) link static.
+.IP "\fB-elf\fR (\fB-noelf\fR)" 20
+Produce assembler code needed for the ELF binary format. The -elf
+option is passed to the asm and link script.
+.IP "\fB-g\fR (\fB-nog\fR)" 20
+Produce (no) debugging information using the stabs format. gdb can work
+with this debugging information. Please read the file
+README-MOCKA-DEBUGGING in the doc directory of mocka.
+.IP "\fB-gc\fR (\fB-nogc\fR)" 20
+Produce (no) constant debugging information. gdb can use it, but dbx
+does currently not work with this.
+.IP "\fB-ge\fR (\fB-noge\fR)" 20
+Produce (no) enumeration debugging information. Use -noge if you have
+a buggy gdb like gdb-4.15.1.
+.IP "\fB-S\fR (\fB-noS\fR)" 20
+The generated symbolic machine code is written to 
+file \fImodule\fR.s
+.PP
+The following options may be used to overwrite 
+installation parameters.
+.IP "\fB-D\fR \fIdirectory\fR" 20
+Specifies a directory where to place the compilation results
+(the files *.[dmiros]) in. This option defaults to the current
+directory.
+.IP "\fB-link\fR \fIscript\fR" 20
+Use
+.I script
+to invoke \fIld\fR.
+When
+.B -p
+.I module
+is specified,
+.I mocka
+collects all imported modules,
+checks them for consistency,
+creates a root module
+and then invokes
+.I script
+.I module
+.I codefiles
+... .
+.IP "\fB-edit\fR \fIscript\fR" 20
+Use
+.I script
+to invoke the editor.
+When one of the commands
+.B d
+.I module
+or
+.B i
+.I module
+is given during session mode
+.I script
+.I sourcefile
+is called.
+.IP "\fB-list\fR \fIscript\fR" 20
+Use
+.I script
+to invoke the lister.
+When an error is detectect during session mode
+.I script
+.I sourcefile
+.I errorfile
+is called.
+.IP "\fB-asm\fR \fIscript\fR" 20
+Use
+.I script
+to invoke the assembler. The compiler produces assembler
+code, this script has to call the assembler to produce
+object code.
+.IP "\fB-syslib\fR \fIdir\fR" 20
+Use \fIdir\fR as system library.
+.SH COMMANDS
+.IP "\fBd\fR \fImodule\fR" 20
+Edit definition module \fImodule\fR.
+(The \fImodule\fR 
+in a
+.B d
+or
+.B i
+command may be omitted. Then the
+.I module
+of a previous
+.B d
+or
+.B i
+command is used.)
+.IP "\fBi\fR \fImodule\fR" 20
+Edit program or implementation \fImodule\fR.
+.IP "\fBs\fR \fImodule\fR" 20
+Create symbol files for \fImodule\fR
+and all (transitively) imported modules
+if they are missing or outdated.
+.IP "\fBc\fR \fImodule\fR" 20
+Create code file for \fImodule\fR
+and symbol files for \fImodule\fR
+and all (transitively) imported modules
+if they are missing or outdated.
+.IP "\fBp\fR \fImodule\fR" 20
+Create code file for \fImodule\fR and code and symbol files for
+all (transitively) imported modules
+if they are missing or outdated.
+Create program \fImodule\fR if missing or obsolete.
+(\fImodule\fR 
+may be omitted. Then the
+.I module
+of a previous
+.B p
+command is used.)
+.IP "\fI<empty>\fR" 20
+The empty command is used to resume processing after editing
+a file. It is equivalent to the latest
+.B s
+,
+.B c
+or
+.B p
+command.
+
+.IP "-\fIflag\fR" 20
+(where 
+.I flag
+stands for 
+\fBindex\fR,
+\fBnoindex\fR,
+\fBrange\fR,
+\fBnorange\fR
+\fBstatic\fR,
+\fBnostatic\fR
+, \fBg\fR
+, \fBnog\fR
+, \fBgc\fR
+, \fBnogc\fR
+, \fBS\fR
+, \fBnoS\fR
+, \fBelf\fR
+, \fBnoelf\fR
+) has the the same meaning as the corresponding 
+.I mc
+argument.
+.IP "\fB-info\fR" 20
+Shows current settings of compiler options.
+.IP "\fBq\fR" 20
+Quit.
+.IP "\fIunixcommand\fR" 20
+Commands not in the preceeding list are treated as Unix commands.
+.SH SPECIAL
+Procedures written in other languages may be accessed by Modula-2 procedures.
+The compiler follows the type mapping and calling conventions of C.
+External entities must be defined in \fIforeign modules\fR.
+These are definition modules where the keyword
+DEFINITION is replaced by FOREIGN.
+For such a module the compiler does not insist on an implementation module.
+When linking a program an argument \fI"M.o"\fR for each foreign
+module \fIM\fR is passed to \fIld\fR.
+(Hence, when an implementation of a foreign
+module uses a further file \fIN.o\fR, there should be an import of a
+corresponding (empty) foreign module \fIN\fR.)
+.SH FILES
+.IP "\fImodule\fR.def" 20
+Source file of definition module \fImodule\fR.
+.IP "\fImodule\fR.mod" 20
+Source file of program or implementation \fImodule\fR.
+.IP "\fImodule\fR.d" 20
+Symbol file for definition module \fImodule\fR
+used for inter module type checking. 
+.IP "\fImodule\fR.r" 20
+Reference file for \fImodule\fR used for linking.
+.IP "\fImodule\fR.s" 20
+Assembler file for \fImodule\fR.
+.IP "\fImodule\fR.o" 20
+Object code file for \fImodule\fR.
+.IP "\fImodule\fR" 20
+Executable program for program module \fImodule\fR.
+.SH SEE ALSO
+\fIProgramming in Modula-2\fR by Niklaus Wirth
+(Springer-Verlag Berlin, Heidelberg, New York, Tokyo;
+4th edition 1985)
+.SH BUGS
+Only one 
+.I mocka
+process can run in the current directory.
+Only modules in the current directory
+are considered to determine the compilation order
+during session mode.
