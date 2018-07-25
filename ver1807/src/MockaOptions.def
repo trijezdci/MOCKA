@@ -18,48 +18,71 @@
 
 DEFINITION MODULE MockaOptions;
 
-(* Setting Compiler Options *)
+(* Compiler Options Management *)
 
 
 (* ------------------------------------------------------------------------
  * Compiler options
  * ------------------------------------------------------------------------ *)
 
-TYPE Option =
+TYPE Option = (
     
-    (* safety options *)
+  (* safety options *)
     
-  ( IndexChecks,  (* --index-checks, --no-index-checks *)
-    RangeChecks,  (* --range-checks, --no-range-checks *)
-    
-    (* product options *)
-    
-    Elf,          (* --elf *)
-    MachO,        (* --mach-o *)
-    KeepAsm,      (* --keep-asm, --purge-asm *)
-    Build,        (* --build, --no-build *)
-    Static,       (* --static, --no-static *)
-    
-    (* diagnostic options *)
-    
-    Debug,        (* --debug, --no-debug *)
-    Verbose );    (* --verbose *)
+  IndexChecks,    (* --index-checks, --no-index-checks *)
+  RangeChecks,    (* --range-checks, --no-range-checks *)
+  
+  (* product options *)
+  
+  Elf,            (* --elf *)
+  MachO,          (* --mach-o *)
+  KeepAsm,        (* --keep-asm, --purge-asm *)
+  Build,          (* --build, --no-build *)
+  Static,         (* --static, --no-static *)
+  
+  (* diagnostic options *)
+  
+  Debug,          (* --debug, --no-debug *)
+  Verbose,        (* --verbose *)
+  ShowSettings ); (* --show-settings *)
 
 
 (* ------------------------------------------------------------------------
  * Default object format
  * ------------------------------------------------------------------------ *)
 
-CONST DefaultObjFormat = Elf; (* Elf or MachO *)
+CONST DefaultObjFormat = Elf; (* may be either Elf or MachO *)
 
 
 (* ------------------------------------------------------------------------
- * procedure MockaOptions.SetToDefaults
+ * procedure MockaOptions.ApplyDefaults
  * ------------------------------------------------------------------------
  * Sets all compiler options to their default values.
+ *
+ * Defaults
+ *  IndexChecks  : on
+ *  RangeChecks  : on
+ *  Elf          : on
+ *  MachO        : off
+ *  KeepAsm      : on
+ *  Build        : on
+ *  Static       : on
+ *  Debug        : on
+ *  Verbose      : off
+ *  ShowSettings : off
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE SetToDefaults;
+PROCEDURE ApplyDefaults;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaOptions.alreadySet(option)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'option' has been set since module initialisation or
+ * since default settings have last been applied, otherwise FALSE.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE alreadySet ( option : Option ) : BOOLEAN;
 
 
 (* ------------------------------------------------------------------------
@@ -74,12 +97,12 @@ PROCEDURE SetValue ( option : Option; value : BOOLEAN );
 
 
 (* ------------------------------------------------------------------------
- * function MockaOptions.enabled(option)
+ * function MockaOptions.isEnabled(option)
  * ------------------------------------------------------------------------
  * Returns TRUE if 'option' is enabled, otherwise FALSE.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE enabled ( option : Option ) : BOOLEAN;
+PROCEDURE isEnabled ( option : Option ) : BOOLEAN;
 
 
 END MockaOptions.

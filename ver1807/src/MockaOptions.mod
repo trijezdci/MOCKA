@@ -18,7 +18,7 @@
 
 IMPLEMENTATION MODULE MockaOptions;
 
-(* Setting Compiler Options *)
+(* Compiler Options Management *)
 
 
 (* ------------------------------------------------------------------------
@@ -32,28 +32,52 @@ TYPE OptionSet = SET OF Options; (* max 32 options *)
  * Active options
  * ------------------------------------------------------------------------ *)
 
-VAR options : OptionSet;
+VAR options, modifiedOptions : OptionSet;
 
 
 (* ------------------------------------------------------------------------
- * public procedure SetToDefaults
+ * public procedure ApplyDefaults
  * ------------------------------------------------------------------------
  * Sets all compiler options to their default values.
+ *
+ * Defaults
+ *  IndexChecks  : on
+ *  RangeChecks  : on
+ *  Elf          : on
+ *  MachO        : off
+ *  KeepAsm      : on
+ *  Build        : on
+ *  Static       : on
+ *  Debug        : on
+ *  Verbose      : off
+ *  ShowSettings : off
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE SetToDefaults;
+PROCEDURE ApplyDefaults;
+
+BEGIN  
+  (* reset options set *)
+  options :=
+    OptionSet { DefaultObjFormat, IndexChecks, RangeChecks, Debug, Build,
+      KeepAsm, Static };
+  
+  (* reset modified options set *)
+  modifiedOptions := OptionSet { }
+END ApplyDefaults;
+
+
+(* ------------------------------------------------------------------------
+ * public function alreadySet(option)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'option' has been set since module initialisation or
+ * since default settings have last been applied, otherwise FALSE.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE alreadySet ( option : Option ) : BOOLEAN;
 
 BEGIN
-  options := OptionSet {
-    DefaultObjFormat, (* Elf or MachO, as per definition module *)
-    IndexChecks,      (* Index checking is on *)
-    RangeChecks,      (* Range checking is on *)
-    Debug,            (* Debug information is on *)
-    Build,            (* Build mode is on *)
-    KeepAsm,          (* Assembly output preservation is on *)
-    Static(*,*)       (* Static linking is on *)
- (* Verbose *) }      (* Verbose console output is off *)
-END SetToDefaults;
+  RETURN (option IN modifiedOptions)
+END alreadySet;
 
 
 (* ------------------------------------------------------------------------
@@ -69,55 +93,60 @@ PROCEDURE SetValue ( option : Option; value : BOOLEAN );
 BEGIN
   CASE option OF
   | Elf :
-    Set(Elf, value);
-    Set(MachO, NOT value) (* Elf disables MachO *)
+    SetFlag(Elf, value);
+    SetFlag(MachO, NOT value) (* Elf disables MachO *)
     
   | MachO :
-    Set(MachO, value);
-    Set(Elf, NOT value) (* MachO disables Elf *)
+    SetFlag(MachO, value);
+    SetFlag(Elf, NOT value) (* MachO disables Elf *)
     
   | Static :
     (* option static only applies when build is on *)
     IF (value = TRUE) AND (Build IN optionSet) THEN
-      Set(Static, TRUE)
+      SetFlag(Static, TRUE)
     END (* IF *)
     
   ELSE (* all other options *)
-    Set(option, value)
+    SetFlag(option, value)
   END (* CASE *)
 END SetValue;
 
 
 (* ------------------------------------------------------------------------
- * public function enabled(option)
+ * public function isEnabled(option)
  * ------------------------------------------------------------------------
  * Returns TRUE if 'option' is enabled, otherwise FALSE.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE enabled ( option : Option ) : BOOLEAN;
+PROCEDURE isEnabled ( option : Option ) : BOOLEAN;
 
 BEGIN
   RETURN (option IN options)
-END enabled;
+END isEnabled;
 
 
 (* ------------------------------------------------------------------------
- * private procedure Set(option, value)
+ * private procedure SetFlag(option, value)
  * ------------------------------------------------------------------------
- * Sets 'option' to 'value'. No integrity checking is carried out.
+ * Sets 'option' to 'value' and records its modification status.
+ * No integrity checking and no integrity adjustment is performed.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE Set ( option : Option; value : BOOLEAN );
+PROCEDURE SetFlag ( option : Option; value : BOOLEAN );
 
 BEGIN
+  (* set value *)
   IF value = TRUE THEN
     INCL(options, option)
   ELSE
     EXCL(options, option)
-  END (* IF *)
-END Set;
+  END; (* IF *)
+  
+  (* remember modification status *)
+  INCL(modifiedOptions, option)
+END SetFlag;
 
 
 BEGIN (* MockaOptions *)
-  SetToDefaults
+  ApplyDefaults
 END MockaOptions.
