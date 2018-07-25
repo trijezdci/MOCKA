@@ -50,8 +50,8 @@ BEGIN
     RangeChecks,      (* Range checking is on *)
     Debug,            (* Debug information is on *)
     Build,            (* Build mode is on *)
-    KeepAsm (*,*)     (* Assembly output preservation is on *)
- (* Static, *)        (* Static linking is off *)
+    KeepAsm,          (* Assembly output preservation is on *)
+    Static(*,*)       (* Static linking is on *)
  (* Verbose *) }      (* Verbose console output is off *)
 END SetToDefaults;
 

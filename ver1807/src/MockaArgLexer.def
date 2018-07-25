@@ -46,6 +46,8 @@ TYPE Token = (
   
   (* product options *)
   
+  Elf,           (* --elf *)
+  MachO,         (* --mach-o *)
   KeepAsm,       (* --keep-asm *)
   PurgeAsm,      (* --purge-asm *)
   Build,         (* --build *)

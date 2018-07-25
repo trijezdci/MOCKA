@@ -22,19 +22,27 @@ DEFINITION MODULE MockaOptions;
 
 
 (* ------------------------------------------------------------------------
- * Available options
+ * Compiler options
  * ------------------------------------------------------------------------ *)
 
 TYPE Option =
-  ( Invalid,
+    
+    (* safety options *)
+    
+  ( IndexChecks,  (* --index-checks, --no-index-checks *)
+    RangeChecks,  (* --range-checks, --no-range-checks *)
+    
+    (* product options *)
+    
     Elf,          (* --elf *)
     MachO,        (* --mach-o *)
-    IndexChecks,  (* --index-checks, --no-index-checks *)
-    RangeChecks,  (* --range-checks, --no-range-checks *)
     KeepAsm,      (* --keep-asm, --purge-asm *)
-    Debug,        (* --debug, --no-debug *)
     Build,        (* --build, --no-build *)
     Static,       (* --static, --no-static *)
+    
+    (* diagnostic options *)
+    
+    Debug,        (* --debug, --no-debug *)
     Verbose );    (* --verbose *)
 
 

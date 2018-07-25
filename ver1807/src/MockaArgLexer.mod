@@ -190,6 +190,12 @@ BEGIN
   | NoRangeChecks :
     argStr := ArgStrNoRangeChecks
     
+  | Elf :
+    argStr := ArgStrElf
+    
+  | MachO :
+    argStr := ArgStrMachO
+    
   | KeepAsm :
     argStr := ArgStrKeepAsm
     
@@ -297,11 +303,16 @@ BEGIN
   len := strLen(lexeme);
   
   CASE len OF
+  | 5 : (* --elf *)
+    IF strMatches(lexeme, ArgStrElf) THEN
+      RETURN Elf
+    END (* IF *)
+    
   | 6 : (* --help *)
     IF strMatches(lexeme, ArgStrHelp) THEN
       RETURN Help
     END (* IF *)
-      
+    
   | 7 : (* --build, --debug *)
     CASE lexeme[2] OF
     | "b" : (* --build *)
@@ -314,11 +325,18 @@ BEGIN
       END (* IF *)
     END (* CASE *)
     
-  | 8 : (* --static *)
-    IF strMatches(lexeme, ArgStrStatic) THEN
-      RETURN Static
-    END (* IF *)
-      
+  | 8 : (* --mach-o, --static *)
+    CASE lexeme[2] OF
+    | "m" : (* --mach-o *)
+      IF strMatches(lexeme, ArgStrMachO) THEN
+        RETURN MachO
+      END (* IF *)
+    | "s" : (* --static *)
+      IF strMatches(lexeme, ArgStrStatic) THEN
+        RETURN Static
+      END (* IF *)
+    END (* CASE *)
+    
   | 9 : (* --verbose, --version *)
     CASE lexeme[5] OF
     | "b" : (* --verbose *)
