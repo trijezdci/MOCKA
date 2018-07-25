@@ -76,6 +76,12 @@ BEGIN
     Set(MachO, value);
     Set(Elf, NOT value) (* MachO disables Elf *)
     
+  | Static :
+    (* option static only applies when build is on *)
+    IF (value = TRUE) AND (Build IN optionSet) THEN
+      Set(Static, TRUE)
+    END (* IF *)
+    
   ELSE (* all other options *)
     Set(option, value)
   END (* CASE *)
