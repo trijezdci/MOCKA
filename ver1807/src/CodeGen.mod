@@ -104,8 +104,7 @@ END Open;
 (* ------------------------------------------------------------------------
  * Public procedure EmitLn
  * ------------------------------------------------------------------------
- * Writes output buffer to current output file.
- * NB: A line may at most contain 128 characters.
+ * Writes newline to output buffer.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitLn;
