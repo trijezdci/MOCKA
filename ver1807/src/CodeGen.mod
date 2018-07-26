@@ -183,16 +183,115 @@ END EmitString;
 
 
 (* ------------------------------------------------------------------------
- * Public procedure EmitInt(ch)
+ * Public procedure EmitInt(i)
  * ------------------------------------------------------------------------
  * Writes the ASCII representation of integer 'i' to output buffer.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitInt ( i : INTEGER );
 
+CONST MaxDigits = 16;
+
+VAR
+  index, digitCount : CARDINAL;
+  digit : ARRAY [0 .. MaxDigits] OF CHAR;
+
 BEGIN
-  (* TO DO *)
+  IF file = NIL THEN
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* zero *)
+  IF i = 0 THEN
+    EmitChar("0");
+    RETURN
+  END; (* IF *)
+
+  (* smallest integer *)
+  IF i = MIN(INTEGER) THEN
+    EmitString("-2147483648");
+    RETURN
+  END; (* IF *)
+
+  (* negative integers *)
+  IF i < 0 THEN
+    EmitChar("-");
+    i := ABS(i)
+  END; (* IF *)
+
+  (* positive integers *)
+  digitCount := 0;
+  WHILE i > 0 DO
+    digit[digitCount] := CHR(ORD("0") + VAL(CARDINAL, i MOD 10));
+    i := i DIV 10;
+    INC(digitCount)
+  END; (* WHILE *)
+
+  (* write digits from most to least significant *)
+  FOR index := digitCount-1 TO 0 BY -1 DO
+    buffer[bufIndex] := digit[index];
+
+    (* flush buffer if near end of buffer *)
+    IF bufIndex > HighWaterMark THEN
+      Flush
+    ELSE
+      INC(bufIndex)
+    END (* IF *)
+  END; (* FOR *)
+
+  status := Success
 END EmitInt;
+
+
+(* ------------------------------------------------------------------------
+ * Public procedure EmitCard(n)
+ * ------------------------------------------------------------------------
+ * Writes the ASCII representation of cardinal 'n' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitCard ( n : CARDINAL );
+
+CONST MaxDigits = 16;
+
+VAR
+  index, digitCount : CARDINAL;
+  digit : ARRAY [0 .. MaxDigits] OF CHAR;
+
+BEGIN
+  IF file = NIL THEN
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* zero *)
+  IF i = 0 THEN
+    EmitChar("0");
+    RETURN
+  END; (* IF *)
+
+  (* digits *)
+  digitCount := 0;
+  WHILE i > 0 DO
+    digit[digitCount] := CHR(ORD("0") + n MOD 10);
+    i := i DIV 10;
+    INC(digitCount)
+  END; (* WHILE *)
+
+  (* write digits from most to least significant *)
+  FOR index := digitCount-1 TO 0 BY -1 DO
+    buffer[bufIndex] := digit[index];
+
+    (* flush buffer if near end of buffer *)
+    IF bufIndex > HighWaterMark THEN
+      Flush
+    ELSE
+      INC(bufIndex)
+    END (* IF *)
+  END; (* FOR *)
+
+  status := Success
+END EmitCard;
 
 
 (* ------------------------------------------------------------------------
@@ -204,7 +303,18 @@ END EmitInt;
 PROCEDURE EmitLabel ( n : CARDINAL );
 
 BEGIN
-  (* TO DO *)
+  (* dot prefix if Elf *)
+  IF MockaOptions.isEnabled(MockaOptions.Elf THEN
+    EmitString(".L")
+  ELSE
+    EmitChar("L")
+  END; (* IF *)
+
+  (* label number *)
+  EmitCard(n)
+
+  (* colon suffix *)
+  EmitChar(":")
 END EmitLabel;
 
 
@@ -217,7 +327,15 @@ END EmitLabel;
 PROCEDURE EmitLabelRef ( n : CARDINAL );
 
 BEGIN
-  (* TO DO *)
+  (* dot prefix if Elf *)
+  IF MockaOptions.isEnabled(MockaOptions.Elf THEN
+    EmitString(".L")
+  ELSE
+    EmitChar("L")
+  END; (* IF *)
+
+  (* label number *)
+  EmitCard(n)
 END EmitLabelRef;
 
 
@@ -230,7 +348,14 @@ END EmitLabelRef;
 PROCEDURE EmitProc ( (*CONST*) VAR ident : ARRAY OF CHAR );
 
 BEGIN
-  (* TO DO *)
+  (* lowline prefix if MachO *)
+  IF MockaOptions.isEnabled(MockaOptions.MachO) THEN
+    EmitChar("_")
+  END; (* IF *)
+
+  (* identifier and colon *)
+  EmitString(ident);
+  EmitChar(":")
 END EmitProc;
 
 
@@ -243,7 +368,13 @@ END EmitProc;
 PROCEDURE EmitProcRef ( (*CONST*) VAR ident : ARRAY OF CHAR );
 
 BEGIN
-  (* TO DO *)
+  (* lowline prefix if MachO *)
+  IF MockaOptions.isEnabled(MockaOptions.MachO THEN
+    EmitChar("_")
+  END; (* IF *)
+
+  (* identifier *)
+  EmitString(ident)
 END EmitProcRef;
 
 
