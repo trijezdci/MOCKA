@@ -71,6 +71,13 @@ VAR bufIndex : CARDINAL;
 
 
 (* ------------------------------------------------------------------------
+ * Status of last operation
+ * ------------------------------------------------------------------------ *)
+
+VAR status : Status;
+
+
+(* ------------------------------------------------------------------------
  * Public procedure Open(filename)
  * ------------------------------------------------------------------------
  * Opens output file 'filename'.
@@ -226,6 +233,19 @@ END EmitProcRef;
 
 
 (* ------------------------------------------------------------------------
+ * Public function lastStatus()
+ * ------------------------------------------------------------------------
+ * Returns the status of the last operation.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE lastStatus : Status;
+
+BEGIN
+  RETURN status
+END lastStatus;
+
+
+(* ------------------------------------------------------------------------
  * Public procedure Flush
  * ------------------------------------------------------------------------
  * Writes output buffer to current output file.
@@ -277,6 +297,5 @@ END Close;
 
 BEGIN (* CodeGen *)
   file := NIL;
-  bufIndex := 0;
   status := Success
 END CodeGen.
