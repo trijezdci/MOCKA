@@ -167,9 +167,6 @@ BEGIN
       (* write char *)
       buffer[bufIndex] := ch;
 
-      (* next char *)
-      INC(index);
-
       (* flush buffer if near end of buffer *)
       IF bufIndex > HighWaterMark THEN
         Flush
@@ -177,8 +174,11 @@ BEGIN
         INC(bufIndex)
       END; (* IF *)
 
-      status := Success
-    END (* WHILE *)
+      (* next char *)
+      INC(index)
+    END; (* WHILE *)
+
+    status := Success
   END (* IF *)
 END EmitString;
 
