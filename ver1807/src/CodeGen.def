@@ -81,6 +81,15 @@ PROCEDURE EmitInt ( i : INTEGER );
 
 
 (* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitCard(n)
+ * ------------------------------------------------------------------------
+ * Writes the ASCII representation of cardinal 'n' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitCard ( n : CARDINAL );
+
+
+(* ------------------------------------------------------------------------
  * Procedure CodeGen.EmitLabel(n)
  * ------------------------------------------------------------------------
  * Writes a declaration for label with suffix 'n' to output buffer.
