@@ -92,7 +92,7 @@ BEGIN
     bufIndex := 0;
     BasicIO.OpenOutput(file, filename);
 
-    IF DONE THEN
+    IF BasicIO.DONE THEN
       status := Success
     ELSE
       status := FileOpenFailed
@@ -158,15 +158,18 @@ BEGIN
   IF file = NIL THEN
     status := FileNotOpen
   ELSE
-    ch := s[0];
     index := 0;
-    WHILE (ch # NIL) AND (index <= HIGH(s)) DO
+    WHILE index <= HIGH(s) DO
+      ch := s[index];
+      IF ch = NUL THEN
+        EXIT
+      END; (* IF *)
+
       (* write char *)
       buffer[bufIndex] := ch;
 
       (* next char *)
       INC(index);
-      ch := s[index];
 
       (* flush buffer if near end of buffer *)
       IF bufIndex > HighWaterMark THEN
