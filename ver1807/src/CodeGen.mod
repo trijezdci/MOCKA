@@ -22,7 +22,7 @@ IMPLEMENTATION MODULE CodeGen;
 (* Emitter for Assembly Output *)
 
 
-IMPORT SYSTEM, BasicIO;
+IMPORT SYSTEM, BasicIO, MockaOptions;
 
 
 (* ------------------------------------------------------------------------
