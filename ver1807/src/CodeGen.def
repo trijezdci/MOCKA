@@ -72,7 +72,7 @@ PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
 
 
 (* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitInt(ch)
+ * Procedure CodeGen.EmitInt(i)
  * ------------------------------------------------------------------------
  * Writes the ASCII representation of integer 'i' to output buffer.
  * ------------------------------------------------------------------------ *)
