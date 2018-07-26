@@ -20,19 +20,19 @@ DEFINITION MODULE CgAssOut; (* TO DO: s/Ass/Asm *)
 
 (* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    Isn't this ironic?
-   
+
    The ISO Modula-2 working group changed the designated identifier for the
    smalles addressable unit from SAU to LOC, because the German delegation
    had objected on the grounds that 'sau' was offensive. In German 'sau'
    means 'sow' and it is used as a derogative. So far so good.
-   
+
    Yet here we have the sources of the MOCKA compiler, written by some of
    the members of that German delegation, with a module identifier and a
    whole bunch of procedures prefixed with 'Ass'.
-   
+
    Oh the hypocrisy. You couldn't make this up.
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ *)
-   
+
 
 PROCEDURE AssOpen ( VAR name : ARRAY OF CHAR );
 
@@ -57,8 +57,29 @@ PROCEDURE AssString ( VAR s : ARRAY OF CHAR );
 (* GenHString the whole string is output, while GenString *)
 (* Outputs until the first 0c character                   *)
 
+(* NONSENSE!
 
-PROCEDURE AssHString ( VAR s : ARRAY OF CHAR );
+   Procedure AssHString does no such thing. It is semantically equivalent
+   to procedure AssString. Both procedures copy all characters from the
+   argument string to the output buffer up to the NUL terminator.
+
+   The only difference is that AssString iterates over each character,
+   while AssHString iterates over chunks of four characters, making it
+   a little faster but a lot uglier, less maintainable and to say the
+   least CONFUSING, as evidenced by the fact that even the authors got
+   it wrong when writing the above comment explaining what it does.
+
+   Worse still is the fact that AssHString is overwhelmingly called on
+   arguments of very short strings, typically less than 10 characters,
+   often only one to four characters. Only very seldomly are arguments
+   of ~20 characters passed to it. Hardly any justification for
+   using a badly written and misdocumented "fast" procedure.
+
+   The dictum "PREMATURE OPTIMISATION is the root of all evil" applies here.
+
+   http://wiki.c2.com/?PrematureOptimization *)
+
+PROCEDURE AssHString ( VAR s : ARRAY OF CHAR ); (* TO BE AXED *)
 
 
 PROCEDURE AssInt ( i : INTEGER );
