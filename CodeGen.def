@@ -1,0 +1,147 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ *                                                                          *
+ * File 'CodeGen.def' Copyright (C) 2018, Benjamin Kowarsch          *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE CodeGen;
+(* to replace CgAssOut *)
+
+(* Emitter for Assembly Output *)
+
+
+(* ------------------------------------------------------------------------
+ * Status type
+ * ------------------------------------------------------------------------ *)
+
+TYPE Status = (
+  Success,
+  FileAlreadyOpen,
+  FileOpenFailed,
+  FileNotOpen,
+  BufferEmpty,
+  WriteFailed );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.Open(filename)
+ * ------------------------------------------------------------------------
+ * Opens output file 'filename'.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE Open ( VAR filename : ARRAY OF CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitLn
+ * ------------------------------------------------------------------------
+ * Writes output buffer to current output file.
+ * NB: A line may at most contain 128 characters.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitLn;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitChar(ch)
+ * ------------------------------------------------------------------------
+ * Writes character 'ch' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitChar ( ch : CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitString(s)
+ * ------------------------------------------------------------------------
+ * Writes string 's' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitInt(ch)
+ * ------------------------------------------------------------------------
+ * Writes the ASCII representation of integer 'i' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitInt ( i : INTEGER );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitLabel(n)
+ * ------------------------------------------------------------------------
+ * Writes a declaration for label with suffix 'n' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitLabel ( n : CARDINAL );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitLabelRef(n)
+ * ------------------------------------------------------------------------
+ * Writes a reference to the label with suffix 'n' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitLabelRef ( n : CARDINAL );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitProc(ident)
+ * ------------------------------------------------------------------------
+ * Writes a declaration for procedure 'ident' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitProc ( (*CONST*) VAR ident : ARRAY OF CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitProcRef(ident)
+ * ------------------------------------------------------------------------
+ * Writes a reference to procedure 'ident' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitProcRef ( (*CONST*) VAR ident : ARRAY OF CHAR );
+
+
+(* ------------------------------------------------------------------------
+ * Function CodeGen.lastStatus()
+ * ------------------------------------------------------------------------
+ * Returns the status of the last operation.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE lastStatus : Status;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.Flush
+ * ------------------------------------------------------------------------
+ * Writes output buffer to current output file.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE Flush;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.Close
+ * ------------------------------------------------------------------------
+ * Flushes buffer and closes current output file.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE Close;
+
+
+END CodeGen.
