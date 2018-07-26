@@ -128,14 +128,16 @@ BEGIN
   IF file = NIL THEN
     status := FileNotOpen
   ELSE
+    (* write char *)
+    buffer[bufIndex] := ch;
+
     (* flush buffer if near end of buffer *)
     IF bufIndex > HighWaterMark THEN
       Flush
+    ELSE
+      INC(bufIndex)
     END; (* IF *)
 
-    (* write char *)
-    buffer[bufIndex] := ch;
-    INC(bufIndex);
     status := Success
   END (* IF *)
 END EmitChar;
@@ -149,22 +151,35 @@ END EmitChar;
 
 PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
 
+VAR
+  ch : CHAR;
+  index : CARDINAL;
+
 BEGIN
-  (* TO DO *)
+  IF file = NIL THEN
+    status := FileNotOpen
+  ELSE
+    ch := s[0];
+    index := 0;
+    WHILE (ch # NIL) AND (index <= HIGH(s)) DO
+      (* write char *)
+      buffer[bufIndex] := ch;
+
+      (* next char *)
+      INC(index);
+      ch := s[index];
+
+      (* flush buffer if near end of buffer *)
+      IF bufIndex > HighWaterMark THEN
+        Flush
+      ELSE
+        INC(bufIndex)
+      END; (* IF *)
+
+      status := Success
+    END (* WHILE *)
+  END (* IF *)
 END EmitString;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure ArrayOfChar(a)
- * ------------------------------------------------------------------------
- * Writes the entire array 'a' (from index 0 to HIGH(a)) to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitArrayOfChar ( (*CONST*) VAR a : ARRAY OF CHAR );
-
-BEGIN
-  (* TO DO *)
-END EmitArrayOfChar;
 
 
 (* ------------------------------------------------------------------------

@@ -66,19 +66,10 @@ PROCEDURE EmitChar ( ch : CHAR );
 (* ------------------------------------------------------------------------
  * Procedure CodeGen.EmitString(s)
  * ------------------------------------------------------------------------
- * Writes string 's' (up to the first ASCII NUL code) to output buffer.
+ * Writes string 's' to output buffer.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
-
-
-(* ------------------------------------------------------------------------
- * Procedure CodeGen.ArrayOfChar(a)
- * ------------------------------------------------------------------------
- * Writes the entire array 'a' (from index 0 to HIGH(a)) to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitArrayOfChar ( (*CONST*) VAR a : ARRAY OF CHAR );
 
 
 (* ------------------------------------------------------------------------
