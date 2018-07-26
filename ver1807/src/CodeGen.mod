@@ -305,7 +305,7 @@ PROCEDURE EmitLabel ( n : CARDINAL );
 
 BEGIN
   (* dot prefix if Elf *)
-  IF MockaOptions.isEnabled(MockaOptions.Elf THEN
+  IF MockaOptions.isEnabled(MockaOptions.Elf) THEN
     EmitString(".L")
   ELSE
     EmitChar("L")
@@ -329,7 +329,7 @@ PROCEDURE EmitLabelRef ( n : CARDINAL );
 
 BEGIN
   (* dot prefix if Elf *)
-  IF MockaOptions.isEnabled(MockaOptions.Elf THEN
+  IF MockaOptions.isEnabled(MockaOptions.Elf) THEN
     EmitString(".L")
   ELSE
     EmitChar("L")
@@ -370,7 +370,7 @@ PROCEDURE EmitProcRef ( (*CONST*) VAR ident : ARRAY OF CHAR );
 
 BEGIN
   (* lowline prefix if MachO *)
-  IF MockaOptions.isEnabled(MockaOptions.MachO THEN
+  IF MockaOptions.isEnabled(MockaOptions.MachO) THEN
     EmitChar("_")
   END; (* IF *)
 
