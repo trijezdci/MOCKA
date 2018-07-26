@@ -70,6 +70,13 @@ VAR bufIndex : CARDINAL;
 
 
 (* ------------------------------------------------------------------------
+ * Line and column counters
+ * ------------------------------------------------------------------------ *)
+
+VAR lineCounter, columnCounter : CARDINAL;
+
+
+(* ------------------------------------------------------------------------
  * Status of last operation
  * ------------------------------------------------------------------------ *)
 
@@ -93,6 +100,8 @@ BEGIN
     BasicIO.OpenOutput(file, filename);
 
     IF BasicIO.DONE THEN
+      lineCounter := 1;
+      columnCounter := 1;
       status := Success
     ELSE
       status := FileOpenFailed
@@ -110,7 +119,9 @@ END Open;
 PROCEDURE EmitLn;
 
 BEGIN
-  EmitChar(NEWLINE)
+  EmitChar(NEWLINE);
+  INC(lineCounter);
+  columnCounter := 1
 END EmitLn;
 
 
@@ -128,6 +139,7 @@ BEGIN
   ELSE
     (* write char *)
     buffer[bufIndex] := ch;
+    INC(columnCounter);
 
     (* flush buffer if near end of buffer *)
     IF bufIndex > HighWaterMark THEN
@@ -166,6 +178,7 @@ BEGIN
 
       (* write char *)
       buffer[bufIndex] := ch;
+      INC(columnCounter);
 
       (* flush buffer if near end of buffer *)
       IF bufIndex > HighWaterMark THEN
@@ -232,6 +245,7 @@ BEGIN
   (* write digits from most to least significant *)
   FOR index := digitCount-1 TO 0 BY -1 DO
     buffer[bufIndex] := digit[index];
+    INC(columnCounter);
 
     (* flush buffer if near end of buffer *)
     IF bufIndex > HighWaterMark THEN
@@ -282,6 +296,7 @@ BEGIN
   (* write digits from most to least significant *)
   FOR index := digitCount-1 TO 0 BY -1 DO
     buffer[bufIndex] := digit[index];
+    INC(columnCounter);
 
     (* flush buffer if near end of buffer *)
     IF bufIndex > HighWaterMark THEN
@@ -380,6 +395,32 @@ END EmitProcRef;
 
 
 (* ------------------------------------------------------------------------
+ * Public function line()
+ * ------------------------------------------------------------------------
+ * Returns the line number of the current output position.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE line : CARDINAL;
+
+BEGIN
+  RETURN lineCounter
+END line;
+
+
+(* ------------------------------------------------------------------------
+ * Public function column()
+ * ------------------------------------------------------------------------
+ * Returns the column number of the current output position.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE column : CARDINAL;
+
+BEGIN
+  RETURN columnCounter
+END column;
+
+
+(* ------------------------------------------------------------------------
  * Public function lastStatus()
  * ------------------------------------------------------------------------
  * Returns the status of the last operation.
@@ -438,12 +479,17 @@ BEGIN
     (* flush and close *)
     Flush;
     BasicIO.Close(file);
-    file := NIL
+    file := NIL;
+    lineCounter := 0;
+    columnCounter := 0;
+    status := Success
   END (* IF *)
 END Close;
 
 
 BEGIN (* CodeGen *)
   file := NIL;
+  lineCounter := 0;
+  columnCounter := 0;
   status := Success
 END CodeGen.
