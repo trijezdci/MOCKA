@@ -437,7 +437,8 @@ BEGIN
   ELSE
     (* flush and close *)
     Flush;
-    BasicIO.Close(f)
+    BasicIO.Close(file);
+    file := NIL
   END (* IF *)
 END Close;
 
