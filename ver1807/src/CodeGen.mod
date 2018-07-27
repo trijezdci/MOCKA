@@ -384,12 +384,6 @@ BEGIN
     RETURN
   END; (* IF *)
 
-  (* zero *)
-  IF i = 0 THEN
-    EmitChar("0");
-    RETURN
-  END; (* IF *)
-
   (* smallest integer *)
   IF i = MIN(INTEGER) THEN
     EmitString(MinIntStr);
@@ -402,7 +396,7 @@ BEGIN
     i := ABS(i)
   END; (* IF *)
 
-  (* positive integers *)
+  (* non-negative integers *)
   EmitCard(VAL(CARDINAL, i))
 END EmitInt;
 
