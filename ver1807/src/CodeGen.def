@@ -80,6 +80,7 @@ PROCEDURE EmitTab;
  * Procedure CodeGen.EmitChar(ch)
  * ------------------------------------------------------------------------
  * Writes character 'ch' to output buffer.
+ * Interprets ASCII TAB.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitChar ( ch : CHAR );
@@ -89,6 +90,7 @@ PROCEDURE EmitChar ( ch : CHAR );
  * Procedure CodeGen.EmitString(s)
  * ------------------------------------------------------------------------
  * Writes string 's' to output buffer.
+ * Interprets ASCII TAB.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );

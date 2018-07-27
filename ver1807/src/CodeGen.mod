@@ -218,6 +218,7 @@ END EmitCtrl;
  * Public procedure EmitChar(ch)
  * ------------------------------------------------------------------------
  * Writes character 'ch' to output buffer.
+ * Interprets ASCII TAB.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitChar ( ch : CHAR );
@@ -257,7 +258,8 @@ END EmitChar;
 (* ------------------------------------------------------------------------
  * Public procedure EmitString(s)
  * ------------------------------------------------------------------------
- * Writes string 's' (up to the first ASCII NUL code) to output buffer.
+ * Writes string 's' to output buffer.
+ * Interprets ASCII TAB.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
