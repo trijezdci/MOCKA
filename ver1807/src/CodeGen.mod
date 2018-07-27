@@ -22,7 +22,7 @@ IMPLEMENTATION MODULE CodeGen;
 (* Emitter for Assembly Output *)
 
 
-IMPORT SYSTEM, BasicIO, MockaOptions;
+IMPORT SYSTEM, BasicIO, Newline, Tabulator, MockaOptions;
 
 
 (* ------------------------------------------------------------------------
@@ -40,12 +40,21 @@ CONST HighWaterMark = BufSize - 130;
 
 
 (* ------------------------------------------------------------------------
- * Character constants
+ * ASCII control codes
  * ------------------------------------------------------------------------ *)
 
 CONST
   NUL = CHR(0);
-  NEWLINE = CHR(10);
+  TAB = CHR(9);
+  CR = CHR(13);
+  LF = CHR(10);
+
+
+(* ------------------------------------------------------------------------
+ * ASCII representation of smallest integer
+ * ------------------------------------------------------------------------ *)
+
+CONST MinIntStr = "-2147483648";
 
 
 (* ------------------------------------------------------------------------
@@ -119,9 +128,22 @@ END Open;
 PROCEDURE EmitLn;
 
 BEGIN
-  EmitChar(NEWLINE);
-  INC(lineCounter);
-  columnCounter := 1
+  CASE Newline.mode() OF
+  | Newline.CR :
+    EmitCtrl(CR)
+
+  | Newline.CRLF :
+    EmitCtrl(CR);
+    EmitCtrl(LF)
+
+  | Newline.LF :
+    EmitCtrl(LF)
+  END; (* CASE *)
+
+  IF status = Success THEN
+    INC(lineCounter);
+    columnCounter := 1
+  END (* IF *)
 END EmitLn;
 
 
@@ -137,9 +159,59 @@ END EmitLn;
 
 PROCEDURE EmitTab;
 
+VAR tabWidth : Tabulator.Width;
+
 BEGIN
-  (* TO DO *)
+  IF file = NIL THEN
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* get tab width setting *)
+  tabWidth := Tabulator.width();
+
+  (* write tab or whitespace *)
+  IF tabwidth = 0 THEN
+    (* pass through *)
+    EmitCtrl(TAB);
+
+    (* count as one column *)
+    INC(columnCounter)
+
+  ELSE (* tab width > 0 *)
+    (* replace with whitespace *)
+    REPEAT
+      EmitChar(" ")
+    UNTIL (columnCounter MOD tabWidth) = 0
+  END; (* IF *)
+
+  status := Success
 END EmitTab;
+
+
+(* ------------------------------------------------------------------------
+ * Private procedure EmitCtrl(ch)
+ * ------------------------------------------------------------------------
+ * Writes control code 'ch' VERBATIM to output buffer.  Does NOT interpret
+ * the control code and does NOT update line and column counters.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitCtrl ( ch : CHAR );
+
+BEGIN
+  (* ignore non-control character input *)
+  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+    (* write control code *)
+    buffer[bufIndex] := ch;
+
+    (* flush buffer if near end of buffer *)
+    IF bufIndex > HighWaterMark THEN
+      Flush
+    ELSE
+      INC(bufIndex)
+    END (* IF *)
+  END (* IF *)
+END EmitCtrl;
 
 
 (* ------------------------------------------------------------------------
@@ -152,21 +224,33 @@ PROCEDURE EmitChar ( ch : CHAR );
 
 BEGIN
   IF file = NIL THEN
-    status := FileNotOpen
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* interpret ASCII TAB *)
+  IF ch = TAB THEN
+    EmitTab
+  END; (* IF *)
+
+  (* ignore any other control characters *)
+  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+    status := CtrlCharsIgnored;
+    RETURN
+  END; (* IF *)
+
+  (* write printable character *)
+  buffer[bufIndex] := ch;
+  INC(columnCounter);
+
+  (* flush buffer if near end of buffer *)
+  IF bufIndex > HighWaterMark THEN
+    Flush
   ELSE
-    (* write char *)
-    buffer[bufIndex] := ch;
-    INC(columnCounter);
+    INC(bufIndex)
+  END; (* IF *)
 
-    (* flush buffer if near end of buffer *)
-    IF bufIndex > HighWaterMark THEN
-      Flush
-    ELSE
-      INC(bufIndex)
-    END; (* IF *)
-
-    status := Success
-  END (* IF *)
+  status := Success
 END EmitChar;
 
 
@@ -181,18 +265,35 @@ PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
 VAR
   ch : CHAR;
   index : CARDINAL;
+  ctrlCharsIgnored : BOOLEAN;
 
 BEGIN
   IF file = NIL THEN
-    status := FileNotOpen
-  ELSE
-    index := 0;
-    WHILE index <= HIGH(s) DO
-      ch := s[index];
-      IF ch = NUL THEN
-        EXIT
-      END; (* IF *)
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
 
+  ctrlCharsIgnored := FALSE;
+
+  index := 0;
+  WHILE index <= HIGH(s) DO
+    ch := s[index];
+
+    (* NUL terminates *)
+    IF ch = NUL THEN
+      EXIT
+    END; (* IF *)
+
+    (* interpret TAB *)
+    IF ch = TAB THEN
+      EmitTab
+
+    (* ignore any other control characters *)
+    ELSIF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+      ctrlCharsIgnored := TRUE
+
+    (* write printable characters *)
+    ELSE
       (* write char *)
       buffer[bufIndex] := ch;
       INC(columnCounter);
@@ -206,74 +307,16 @@ BEGIN
 
       (* next char *)
       INC(index)
-    END; (* WHILE *)
+    END (* IF *)
+  END; (* WHILE *)
 
+  (* report status *)
+  IF ctrlCharsIgnored THEN
+    status := CtrlCharsIgnored
+  ELSE
     status := Success
   END (* IF *)
 END EmitString;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure EmitInt(i)
- * ------------------------------------------------------------------------
- * Writes the ASCII representation of integer 'i' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitInt ( i : INTEGER );
-
-CONST MaxDigits = 16;
-
-VAR
-  index, digitCount : CARDINAL;
-  digit : ARRAY [0 .. MaxDigits] OF CHAR;
-
-BEGIN
-  IF file = NIL THEN
-    status := FileNotOpen;
-    RETURN
-  END; (* IF *)
-
-  (* zero *)
-  IF i = 0 THEN
-    EmitChar("0");
-    RETURN
-  END; (* IF *)
-
-  (* smallest integer *)
-  IF i = MIN(INTEGER) THEN
-    EmitString("-2147483648");
-    RETURN
-  END; (* IF *)
-
-  (* negative integers *)
-  IF i < 0 THEN
-    EmitChar("-");
-    i := ABS(i)
-  END; (* IF *)
-
-  (* positive integers *)
-  digitCount := 0;
-  WHILE i > 0 DO
-    digit[digitCount] := CHR(ORD("0") + VAL(CARDINAL, i MOD 10));
-    i := i DIV 10;
-    INC(digitCount)
-  END; (* WHILE *)
-
-  (* write digits from most to least significant *)
-  FOR index := digitCount-1 TO 0 BY -1 DO
-    buffer[bufIndex] := digit[index];
-    INC(columnCounter);
-
-    (* flush buffer if near end of buffer *)
-    IF bufIndex > HighWaterMark THEN
-      Flush
-    ELSE
-      INC(bufIndex)
-    END (* IF *)
-  END; (* FOR *)
-
-  status := Success
-END EmitInt;
 
 
 (* ------------------------------------------------------------------------
@@ -325,6 +368,43 @@ BEGIN
 
   status := Success
 END EmitCard;
+
+
+(* ------------------------------------------------------------------------
+ * Public procedure EmitInt(i)
+ * ------------------------------------------------------------------------
+ * Writes the ASCII representation of integer 'i' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitInt ( i : INTEGER );
+
+BEGIN
+  IF file = NIL THEN
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* zero *)
+  IF i = 0 THEN
+    EmitChar("0");
+    RETURN
+  END; (* IF *)
+
+  (* smallest integer *)
+  IF i = MIN(INTEGER) THEN
+    EmitString(MinIntStr);
+    RETURN
+  END; (* IF *)
+
+  (* negative integers *)
+  IF i < 0 THEN
+    EmitChar("-");
+    i := ABS(i)
+  END; (* IF *)
+
+  (* positive integers *)
+  EmitCard(VAL(CARDINAL, i))
+END EmitInt;
 
 
 (* ------------------------------------------------------------------------

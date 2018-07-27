@@ -27,7 +27,17 @@ DEFINITION MODULE CodeGen;
  * ------------------------------------------------------------------------ *)
 
 TYPE Status = (
+
+  (* success code *)
+
   Success,
+
+  (* warning codes *)
+
+  CtrlCharsIgnored,
+
+  (* error codes *)
+
   FileAlreadyOpen,
   FileOpenFailed,
   FileNotOpen,
@@ -85,21 +95,21 @@ PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
 
 
 (* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitInt(i)
- * ------------------------------------------------------------------------
- * Writes the ASCII representation of integer 'i' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitInt ( i : INTEGER );
-
-
-(* ------------------------------------------------------------------------
  * Procedure CodeGen.EmitCard(n)
  * ------------------------------------------------------------------------
  * Writes the ASCII representation of cardinal 'n' to output buffer.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitCard ( n : CARDINAL );
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CodeGen.EmitInt(i)
+ * ------------------------------------------------------------------------
+ * Writes the ASCII representation of integer 'i' to output buffer.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitInt ( i : INTEGER );
 
 
 (* ------------------------------------------------------------------------
