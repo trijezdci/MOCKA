@@ -35,7 +35,7 @@ CONST DefaultMode = LF;
 TYPE Mode = (
   CR,   (* ASCII CR *)
   CRLF, (* ASCII CR+LF *)
-  LF);  (* ASCII LF *)
+  LF ); (* ASCII LF *)
 
 
 (* ------------------------------------------------------------------------
