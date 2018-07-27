@@ -57,6 +57,6 @@ BEGIN
 END width;
 
 
-BEGIN
+BEGIN (* Tabulator *)
   tabWidth := DefaultWidth
 END Tabulator.
