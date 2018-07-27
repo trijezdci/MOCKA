@@ -19,7 +19,7 @@
 DEFINITION MODULE CodeGen;
 (* to replace CgAssOut *)
 
-(* Emitter for Assembly Output *)
+(* Target Independent Part of Assembly Output Emitter *)
 
 
 (* ------------------------------------------------------------------------
@@ -112,42 +112,6 @@ PROCEDURE EmitCard ( n : CARDINAL );
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitInt ( i : INTEGER );
-
-
-(* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitLabel(n)
- * ------------------------------------------------------------------------
- * Writes a declaration for label with suffix 'n' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitLabel ( n : CARDINAL );
-
-
-(* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitLabelRef(n)
- * ------------------------------------------------------------------------
- * Writes a reference to the label with suffix 'n' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitLabelRef ( n : CARDINAL );
-
-
-(* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitProc(ident)
- * ------------------------------------------------------------------------
- * Writes a declaration for procedure 'ident' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitProc ( (*CONST*) VAR ident : ARRAY OF CHAR );
-
-
-(* ------------------------------------------------------------------------
- * Procedure CodeGen.EmitProcRef(ident)
- * ------------------------------------------------------------------------
- * Writes a reference to procedure 'ident' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitProcRef ( (*CONST*) VAR ident : ARRAY OF CHAR );
 
 
 (* ------------------------------------------------------------------------

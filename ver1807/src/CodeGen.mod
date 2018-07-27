@@ -13,13 +13,13 @@
  *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
  *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
  *                                                                          *
- * File 'CodeGen.mod' Copyright (C) 2018, Benjamin Kowarsch          *
+ * File 'CodeGen.mod' Copyright (C) 2018, Benjamin Kowarsch                 *
  * ------------------------------------------------------------------------ *)
 
 IMPLEMENTATION MODULE CodeGen;
 (* to replace CgAssOut *)
 
-(* Emitter for Assembly Output *)
+(* Target Independent Part of Assembly Output Emitter *)
 
 
 IMPORT SYSTEM, BasicIO, Newline, Tabulator, MockaOptions;
@@ -193,7 +193,8 @@ END EmitTab;
  * Private procedure EmitCtrl(ch)
  * ------------------------------------------------------------------------
  * Writes control code 'ch' VERBATIM to output buffer.  Does NOT interpret
- * the control code and does NOT update line and column counters.
+ * the control code and does NOT update line and column counters.  IGNORES
+ * any non-control characters.  Does not set status.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitCtrl ( ch : CHAR );
@@ -401,90 +402,6 @@ BEGIN
   (* non-negative integers *)
   EmitCard(VAL(CARDINAL, i))
 END EmitInt;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure EmitLabel(n)
- * ------------------------------------------------------------------------
- * Writes a declaration for label with suffix 'n' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitLabel ( n : CARDINAL );
-
-BEGIN
-  (* dot prefix if Elf *)
-  IF MockaOptions.isEnabled(MockaOptions.Elf) THEN
-    EmitString(".L")
-  ELSE
-    EmitChar("L")
-  END; (* IF *)
-
-  (* label number *)
-  EmitCard(n)
-
-  (* colon suffix *)
-  EmitChar(":")
-END EmitLabel;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure EmitLabelRef(n)
- * ------------------------------------------------------------------------
- * Writes a reference to the label with suffix 'n' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitLabelRef ( n : CARDINAL );
-
-BEGIN
-  (* dot prefix if Elf *)
-  IF MockaOptions.isEnabled(MockaOptions.Elf) THEN
-    EmitString(".L")
-  ELSE
-    EmitChar("L")
-  END; (* IF *)
-
-  (* label number *)
-  EmitCard(n)
-END EmitLabelRef;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure EmitProc(ident)
- * ------------------------------------------------------------------------
- * Writes a declaration for procedure 'ident' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitProc ( (*CONST*) VAR ident : ARRAY OF CHAR );
-
-BEGIN
-  (* lowline prefix if MachO *)
-  IF MockaOptions.isEnabled(MockaOptions.MachO) THEN
-    EmitChar("_")
-  END; (* IF *)
-
-  (* identifier and colon *)
-  EmitString(ident);
-  EmitChar(":")
-END EmitProc;
-
-
-(* ------------------------------------------------------------------------
- * Public procedure EmitProcRef(ident)
- * ------------------------------------------------------------------------
- * Writes a reference to procedure 'ident' to output buffer.
- * ------------------------------------------------------------------------ *)
-
-PROCEDURE EmitProcRef ( (*CONST*) VAR ident : ARRAY OF CHAR );
-
-BEGIN
-  (* lowline prefix if MachO *)
-  IF MockaOptions.isEnabled(MockaOptions.MachO) THEN
-    EmitChar("_")
-  END; (* IF *)
-
-  (* identifier *)
-  EmitString(ident)
-END EmitProcRef;
 
 
 (* ------------------------------------------------------------------------
