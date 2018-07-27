@@ -126,6 +126,23 @@ END EmitLn;
 
 
 (* ------------------------------------------------------------------------
+ * Public procedure EmitTab
+ * ------------------------------------------------------------------------
+ * Writes  ASCII TAB  or  whitespace  to the output buffer depending on the
+ * value returned by function Tabulator.width().  If the value is zero then
+ * ASCII TAB is written. Otherwise, a space is written, followed by as many
+ * spaces as are necessary to  advance to the following tab stop,  which is
+ * reached when (column counter MOD tab width) = 0.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitTab;
+
+BEGIN
+  (* TO DO *)
+END EmitTab;
+
+
+(* ------------------------------------------------------------------------
  * Public procedure EmitChar(ch)
  * ------------------------------------------------------------------------
  * Writes character 'ch' to output buffer.
