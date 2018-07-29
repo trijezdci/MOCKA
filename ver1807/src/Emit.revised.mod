@@ -25,6 +25,9 @@ IMPLEMENTATION MODULE Emit;
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  * The following manual modifications were made to this file.
  *
+ * (0) added procedure header comments for visual cues
+ *     and reformatted various code for readability
+ *
  * (1) the unqualified import list from module CgAssOut was replaced by
  *     qualified import of replacement module CodeGen.
  *
@@ -44,11 +47,9 @@ IMPLEMENTATION MODULE Emit;
  *     were replaced by EmitChar.
  *
  * (4) all occurences of EmitChar with a quoted ASCII TAB character as
- *     argument were replaced by EmitChar(TAB).
+ *     argument were replaced by EmitTab.
  *
- * (5) definition CONST TAB = CHR(9) was inserted after the import section.
- *
- * (6) local identifiers prefixed with 'Ass' were renamed as follows:
+ * (5) local identifiers prefixed with 'Ass' were renamed as follows:
  *
  *     s/AssRegister/EmitRegister/
  *     s/AssRegister2/EmitRegister2/
@@ -58,68 +59,95 @@ IMPLEMENTATION MODULE Emit;
  *     s/AssAdrMode/EmitAdrMode/
  *     s/AssSuffix/EmitSuffix/
  *     s/AssSigned/EmitSigned/
+ *
+ * (6) renamed constant Kommentar to EmitAnnotations.
+ *
+ * (7) added new procedure EmitMovReg to replace LR.
+ *
+ * (8) added new procedure EmitProcDecl to replace DeclareProcedure.
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *)
 
 IMPORT IR;
-IMPORT  RegAlloc;
-FROM    RegAlloc IMPORT Spilllocation, Action;
+
+IMPORT RegAlloc;
+FROM RegAlloc IMPORT
+  Spilllocation, Action;
+
 (******* empty insertion IpInOut *******)
-FROM    InOut IMPORT Write, WriteLn, WriteInt, WriteCard, WriteString;
-FROM IR      IMPORT PrintRegister;
-FROM IR      IMPORT PrintINTEGER, PrintCARDINAL, PrintBOOLEAN;
+
+FROM InOut IMPORT
+  Write, WriteLn, WriteInt, WriteCard, WriteString;
+
+FROM IR IMPORT
+  PrintRegister, PrintINTEGER, PrintCARDINAL, PrintBOOLEAN;
+
 (*++++++ start insertion IpTestImport ++++++*)
 
-FROM	Prints	IMPORT	PrintSHORTCARD, PrintLONGCARD, PrintSHORTINT,
-			PrintLONGINT, PrintDataTempo, PrintAddressTempo,
-			PrintSysProc, PrintLabelList, PrintLabel,
-			PrintMode, PrintString, PrintStringIndex, PrintLONGREAL,
-			PrintREAL, PrintBITSET, PrintProcIndex, PrintRelation,
-			PrintModuleIndex, PrintCHAR, PrintADDRESS,
-			PrintRelSymb, PrintMemAdr, PrintAdrMode;
-
+FROM Prints IMPORT
+  PrintCHAR,PrintSHORTCARD, PrintLONGCARD, PrintSHORTINT,
+  PrintLONGINT, PrintREAL, PrintLONGREAL, PrintBITSET, PrintADDRESS,
+  PrintDataTempo, PrintAddressTempo, PrintSysProc, PrintLabelList,
+  PrintLabel, PrintMode, PrintString, PrintStringIndex, PrintProcIndex,
+  PrintRelation, PrintModuleIndex, PrintRelSymb, PrintMemAdr, PrintAdrMode;
 
 (*------ end   insertion IpTestImport ------*)
-FROM    IR      IMPORT NonTerminal, RegisterSet, Register;
+
+FROM IR IMPORT
+  NonTerminal, RegisterSet, Register;
+
 (*++++++ start insertion IpNtTypes ++++++*)
 
-FROM IR	IMPORT	MemAdr, AdrMode, AdrModeMode;
-
+FROM IR IMPORT
+  MemAdr, AdrMode, AdrModeMode;
 
 (*------ end   insertion IpNtTypes ------*)
+
 (******* empty insertion IpText *******)
+
 (*++++++ start insertion IpTypes ++++++*)
 
 IMPORT CgBase;
-FROM Strings	IMPORT	String;
 
+FROM Strings IMPORT String;
 
 (*------ end   insertion IpTypes ------*)
+
 (*++++++ start insertion IpEmit_i ++++++*)
 
-FROM	SysLib		IMPORT	exit;
-FROM	BasicIO		IMPORT	Erase;
-FROM	SuBase		IMPORT	BuildLibraryFileName, KindAssemblerSourceFile,
-				FileName, AssemblerScript, LibraryDirectory,
-				DefineOption, Enabled, DebugOption,
-				SystemCommand;
-FROM	SuErrors	IMPORT	ERROR, CompilerError, UndefSourcePos, OK;
-FROM	GcgStorage	IMPORT	ALLOCATE;
-FROM	CgBase		IMPORT	Tempo, Mode, SysProc, Relation, MakeRelSymb,
-				GetLabel, ElfOption, InitCgBase;
-FROM	CgTypeMap	IMPORT	ByteSize, WordSize, LongSize,
-				SizeREAL, SizeLONGREAL,
-				CprocNumber, CompUnitProcNumber;
-FROM	CgMobil		IMPORT	UndefOperand;
-FROM	CgUtilities	IMPORT	StringAssign, StringLength,
-				StringAppend1, StringAppend2, StringConcat2,
-				ConvertLONGINTtoString, ConvertREALtoString,
-				IsPowerOfTwo, Log2;
+FROM SysLib IMPORT exit;
 
-(* FROM	CgAssOut	IMPORT	AssInt, AssLn, AssChar, AssString, AssHString,
-				AssOpen, AssClose; replaced by: IMPORT CodeGen; below ... *)
-IMPORT CodeGen;
+FROM BasicIO IMPORT Erase;
 
-CONST TAB = CHR(9); (* manually inserted, BK, July 2018 *)
+FROM SuBase IMPORT
+  BuildLibraryFileName, KindAssemblerSourceFile,
+  FileName, AssemblerScript, LibraryDirectory,
+  DefineOption, Enabled, DebugOption, SystemCommand;
+
+FROM SuErrors IMPORT
+  ERROR, CompilerError, UndefSourcePos, OK;
+
+FROM GcgStorage IMPORT ALLOCATE;
+
+FROM CgBase IMPORT
+  Tempo, Mode, SysProc, Relation,
+  MakeRelSymb, GetLabel, ElfOption, InitCgBase;
+
+FROM CgTypeMap IMPORT
+  CprocNumber, CompUnitProcNumber,
+  ByteSize, WordSize, LongSize, SizeREAL, SizeLONGREAL;
+
+FROM CgMobil IMPORT UndefOperand;
+
+FROM CgUtilities IMPORT
+  StringAssign, StringLength,
+  StringAppend1, StringAppend2, StringConcat2,
+  ConvertLONGINTtoString, ConvertREALtoString, IsPowerOfTwo, Log2;
+
+(* FROM CgAssOut IMPORT
+     AssInt, AssLn, AssChar, AssString, AssHString, AssOpen, AssClose;
+   replaced by: IMPORT CodeGen; below ... *)
+
+IMPORT CodeGen, CodeGenX86;
 
 (* Control lines for the dottool: *)
 
@@ -144,7 +172,7 @@ CONST	MaxDisplay	 = 15;		(* Max. nesting Level of procedures *)
 	MaxFloatTempo	 = 64;		(* Max. size of Float-Stack	    *)
 	MaxPowerTable	 = 31;
 	NoTempo		 = 1111111111;
-	Kommentar	 = FALSE;	(* Kommentare ein/aus		    *)
+	EmitAnnotations	 = FALSE;	(* Annotations on/off *)
 
 VAR
     RelationTable    : ARRAY CgBase.Relation OF
@@ -204,43 +232,101 @@ VAR
 			  END;
 
 
-PROCEDURE   LR  (to, from : Register);
+(* ------------------------------------------------------------------------
+ * Public procedure EmitMovReg(dest, source)
+ * ------------------------------------------------------------------------
+ * Emits a register to register move instruction where 'source' is the
+ * source register and 'dest' is the destination register.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitMovReg ( dest, source : Register );
+
+(* Replacement for LR *)
+
+BEGIN
+  IF EmitAnnotations THEN
+    CodeGen.EmitTab;
+    CodeGen.EmitString("/* MovReg */");
+    CodeGen.EmitLn
+  END; (* IF *)
+
+  (* opcode *)
+  CodeGen.EmitTab;
+  CodeGen.EmitString("movl");
+
+  (* first operand *)
+  CodeGen.EmitTab;
+  EmitRegister(source);
+
+  (* second operand*)
+  CodeGen.EmitString(", ");
+  EmitRegister(dest);
+
+  (* eol *)
+  CodeGen.EmitLn
+END EmitMovReg;
+
+(* ------------------------------------------------------------------------
+ * Obsolete procedure LR(to, from)  --  replaced by EmitMovReg
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE LR ( to, from : Register );
 (*  Copy Register from into Register to *)
 BEGIN
- CodeGen.EmitString(' 	movl	');  EmitRegister(from);  CodeGen.EmitString(', ');  EmitRegister(to);  CodeGen.EmitLn;
-	IF Kommentar THEN
- CodeGen.EmitString('					/* LR */');  CodeGen.EmitLn;
-	END;
+  CodeGen.EmitString(' 	movl	');
+  EmitRegister(from);
+  CodeGen.EmitString(', ');
+  EmitRegister(to);
+  CodeGen.EmitLn;
+
+  IF EmitAnnotations THEN
+    CodeGen.EmitString('					/* LR */');
+    CodeGen.EmitLn;
+  END;
 END LR;
 
-PROCEDURE   Spill (reg : Register; loc : Spilllocation);
+
+(* ------------------------------------------------------------------------
+ * Procedure Spill  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE Spill ( reg : Register; loc : Spilllocation );
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
  CodeGen.EmitString('	pushl	');  EmitRegister(reg);  CodeGen.EmitLn;
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString('					/* Spill */');  CodeGen.EmitLn;
 	END;
   ELSE
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString(' 					/* Spill ');  EmitRegister(reg);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
 	END;
   END;
 END Spill;
 
-PROCEDURE   Restore (reg : Register; loc : Spilllocation);
+
+(* ------------------------------------------------------------------------
+ * Procedure Restore  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE Restore (reg : Register; loc : Spilllocation);
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
  CodeGen.EmitString('	popl	');  EmitRegister(reg);  CodeGen.EmitLn;
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString('					/* Restore */');  CodeGen.EmitLn;
 	END;
   ELSE
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString(' 					/* Restore ');  EmitRegister(reg);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
 	END;
   END;
 END Restore;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure SpillFstack  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE SpillFStack;
   VAR i : INTEGER;
@@ -248,12 +334,17 @@ BEGIN
   FOR i:=0 TO CurFStackSize - 1 DO
     DeclareTempo (FloatLong, FStackTempo[FStackStart + i]);
  CodeGen.EmitString('	fstpl	');  CodeGen.EmitInt( FStackTempo[FStackStart + i]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
-    IF Kommentar THEN
+    IF EmitAnnotations THEN
  CodeGen.EmitString('					/* SpillFstack */');  CodeGen.EmitLn;
     END;
   END;
   CurFStackSize := 0;
 END SpillFStack;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure PushFStack  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE PushFStack;
 (* Ueberpruefung auf Floating-Point-Stack Ueberlauf *)
@@ -273,6 +364,11 @@ BEGIN
   FStackTempo[FStackStart] := NoTempo;
 END PushFStack;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure PopFStack  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE PopFStack;
 (* wird nach jedem pop auf den 387 Stack aufgerufen *)
 BEGIN
@@ -280,17 +376,27 @@ BEGIN
   DEC (CurFStackSize);
 END PopFStack;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure FloatOperation  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE FloatOperation (VAR op: ARRAY OF CHAR);
 BEGIN
   INC (FStackStart);
   IF FStackTempo[FStackStart] # NoTempo THEN
- CodeGen.EmitChar(TAB);  CodeGen.EmitString(op);  CodeGen.EmitString('l	');  CodeGen.EmitInt( FStackTempo[FStackStart]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
+ CodeGen.EmitTab;  CodeGen.EmitString(op);  CodeGen.EmitString('l	');  CodeGen.EmitInt( FStackTempo[FStackStart]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
     FStackTempo[FStackStart] := NoTempo;
   ELSE
- CodeGen.EmitChar(TAB);  CodeGen.EmitString( op);  CodeGen.EmitString('p	%st,%st(1)');  CodeGen.EmitLn;
+ CodeGen.EmitTab;  CodeGen.EmitString( op);  CodeGen.EmitString('p	%st,%st(1)');  CodeGen.EmitLn;
     DEC (CurFStackSize);
   END;
 END FloatOperation;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure CheckRoundMode  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE CheckRoundMode (newmode: RoundMode);
 BEGIN
@@ -311,6 +417,11 @@ BEGIN
   END;
 END CheckRoundMode;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure CheckRoundMode2  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE CheckRoundMode2 (newmode1, newmode2: RoundMode);
 BEGIN
   IF (CurRoundMode <> newmode1) AND (CurRoundMode <> newmode2) THEN
@@ -318,6 +429,10 @@ BEGIN
   END;
 END CheckRoundMode2;
 
+
+(* ------------------------------------------------------------------------
+ * Function IsNilMemAdr  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE IsNilMemAdr (a: MemAdr) : BOOLEAN;
 BEGIN
@@ -328,6 +443,10 @@ BEGIN
 END IsNilMemAdr;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitIndex  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitIndex (VAR base : MemAdr; index : MemAdr; reg : Register);
 BEGIN
   IF NOT IsNilMemAdr (index)
@@ -336,6 +455,10 @@ BEGIN
   END (* IF *);
 END EmitIndex;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitRegister  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitRegister ( r : Register );
 BEGIN
@@ -346,6 +469,10 @@ BEGIN
    END;
 END EmitRegister;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitRegister2  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitRegister2 ( r : Register; mode : CgBase.Mode );
 BEGIN
@@ -358,28 +485,46 @@ BEGIN
 END EmitRegister2;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitWordRegister(r)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitWordRegister ( r : Register );
 BEGIN
-   CodeGen.EmitString(WordReg[r])
+  CodeGen.EmitString(WordReg[r])
 END EmitWordRegister;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitByteRegister(r)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitByteRegister ( r : Register );
 BEGIN
-   CodeGen.EmitString(ByteReg[r])
+  CodeGen.EmitString(ByteReg[r])
 END EmitByteRegister;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitPlusInt(i)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitPlusInt ( i : LONGINT );
 BEGIN
-   IF i>=0 THEN
-      CodeGen.EmitString(' + ')
-   ELSE
-      CodeGen.EmitString(' - ')
-   END;
-   CodeGen.EmitInt(ABS (i));
+  IF i >= 0 THEN
+    CodeGen.EmitString(" + ")
+  ELSE
+    CodeGen.EmitString(" - ")
+  END;
+
+  (* BUG: This is not going to work for i = MIN(LONGINT) -- BK, July 2018 *)
+  CodeGen.EmitInt(ABS(i))
 END EmitPlusInt;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitMemAdr  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitMemAdr ( am : MemAdr );
 BEGIN
@@ -414,109 +559,389 @@ BEGIN
 END EmitMemAdr;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitAdrMode(am)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitAdrMode ( am : AdrMode );
 BEGIN
   WITH am DO
     CASE kind OF
-    | Mconst : CodeGen.EmitChar('$'); CodeGen.EmitInt(constant);
-    | Mreg   : EmitRegister2 (reg,mode);
-    | Mmem   : EmitMemAdr (mem);
-    END;
-  END;
+    | Mconst : CodeGen.EmitChar("$"); CodeGen.EmitInt(constant);
+    | Mreg   : EmitRegister2(reg, mode);
+    | Mmem   : EmitMemAdr(mem)
+    END (* CASE *)
+  END (* WITH *)
 END EmitAdrMode;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitSuffix(s)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitSuffix ( s : CgBase.Mode );
 BEGIN
-  CodeGen.EmitChar(SuffixTable[s]);
+  CodeGen.EmitChar(SuffixTable[s])
 END EmitSuffix;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitSigned(s)
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitSigned ( s : CgBase.Mode );
 BEGIN
-  IF SignedTable[s]
-    THEN CodeGen.EmitChar('s')
-    ELSE CodeGen.EmitChar('z')
-  END;
+  IF SignedTable[s] THEN
+    CodeGen.EmitChar("s")
+  ELSE
+    CodeGen.EmitChar("z")
+  END (* IF *)
 END EmitSigned;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure DeclareModule(extern, compUnitName, ref)
+ * ------------------------------------------------------------------------
+ * Creates a new module entry for compilation unit 'compUnitName'.
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE DeclareModule
-   (    extern       : BOOLEAN;
-    VAR CompUnitName : ARRAY OF CHAR;
+  (     extern       : BOOLEAN;
+    VAR compUnitName : ARRAY OF CHAR;
     VAR ref          : CgBase.ModuleIndex);
-  VAR str : String;
+
+VAR
+  str : String;
+
 BEGIN
-   NEW (ref);
-   WITH ref^ DO
-     Extern := extern;
-     IF Enabled (ElfOption) THEN
-       Name := MakeRelSymb (CompUnitName);
-       StringAssign (str, CompUnitName);
-       StringAppend1 (str, '_s');
-     ELSE
-       StringAssign (str,'_');
-       StringAppend1 (str, CompUnitName);
-       Name := MakeRelSymb (str);
-       StringAppend1 (str,'_s');
-     END;
-     Statics := MakeRelSymb (str);
-   END;
+  NEW(ref);
+  WITH ref^ DO
+    Extern := extern;
+    IF Enabled(ElfOption) THEN
+      Name := MakeRelSymb(compUnitName);
+      StringAssign(str, compUnitName);
+      StringAppend1(str, "_s");
+    ELSE
+      StringAssign(str, "_");
+      StringAppend1(str, compUnitName);
+      Name := MakeRelSymb(str);
+      StringAppend1(str, "_s");
+    END; (* IF *)
+    Statics := MakeRelSymb(str)
+  END (* WITH *)
 END DeclareModule;
 
 
-PROCEDURE DeclareProcedure
-   (    extern       : BOOLEAN;
-	isFunction   : BOOLEAN;
-	ProcMode     : CgBase.Mode;
-    VAR ProcName     : ARRAY OF CHAR;
-        ProcNumber   : SHORTCARD;
+(* ------------------------------------------------------------------------
+ * Procedure EmitProcDecl
+ *  (extern, isFunction, procMode, procName, num, module, lvl, parent, ref)
+ * ------------------------------------------------------------------------
+ * Creates a new procedure entry for procedure 'procName' and emits a
+ * corresponding label declaration.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitProcDecl
+  (     extern,
+        isFunction   : BOOLEAN;
+        procMode     : CgBase.Mode;
+    VAR procName     : ARRAY OF CHAR;
+        procNumber   : SHORTCARD;
         module       : CgBase.ModuleIndex;
-	level        : SHORTCARD;
-	father       : CgBase.ProcIndex;
+        level        : SHORTCARD;
+        parent       : CgBase.ProcIndex;
     VAR ref          : CgBase.ProcIndex);
-  VAR s,t : String;
+
+(* Replacement for DeclareProcedure *)
+
+CONST
+  MaxLen = 80;
+
+VAR
+  prefix : CHAR;
+  len : CARDINAL;
+  label, procNumStr : String;
+  qualifier, ident : POINTER TO String;
+
 BEGIN
-  NEW (ref);
+  NEW(ref);
+  ref^.Extern := extern;
+  ref^.IsFunction : isFunction;
+  ref^.Name := MakeRelSymb(procName);
+  ref^.Number := procNumber;
+  ref^.Module := module;
+  ref^.Level := level;
+  ref^.Father := parent;
+  ref^.Entry := NIL;
+
+  (* generate procedure's assembly label *)
+
+  (* prefix *)
+  IF (* ELF *) MockaOptions.isEnabled(MockaOptions.Elf) THEN
+    prefix := NUL;
+    len := 0
+
+  ELSE (* MachO *)
+    prefix := "_";
+    len := 1
+  END; (* IF *)
+
+  IF (* Modula-2 procedure *) procNumber # CprocNumber THEN
+
+    (* qualifier *)
+    IF (* global procedure *) level = 0 THEN
+
+      (* use module name *)
+      qualifier := module^.Name^
+
+    ELSE (* local procedure *)
+
+      (* use parent's label, which would already have a prefix, if any *)
+      qualifier := parent^.Entry^;
+      prefix := "";
+      len = 0
+    END; (* If *)
+
+    (* ident *)
+    ident := procName;
+
+    (* label length *)
+    len := len + StringLength(qualifier^) + StringLength(ident^) + 1;
+
+    (* permitted length *)
+    IF len <= MaxLen THEN
+      ComposeProcLabel(label, prefix, qualifier^, ident^)
+
+    ELSE (* excess length *)
+      (* use module name and proc name ... *)
+      ComposeProcLabel(label, prefix, module^.Name^, ident^);
+      (* ... and append procedure index number to avoid name collision *)
+      ConvertLONGINTtoString(procNumber, procNumStr);
+      (* use double lowline separator, it cannot occur in M2 identifiers *)
+      StringAppend2(label, "__", procNumStr)
+    END (* IF *)
+
+  ELSE (* foreign procedure *)
+
+    (* no qualifier *)
+    ComposeProcLabel(label, prefix, "", procName)
+  END; (* IF *)
+
+  (* create new symbol entry for label *)
+
+  ref^.Entry := MakeRelSymb(label);
+
+  (* emit label declaration *)
+
+  (* global directive *)
+  CodeGen.EmitTab;
+  CodeGen.EmitString(".globl");
+
+  (* label *)
+  CodeGen.EmitTab;
+  CodeGen.EmitString(ref^.Entry^);
+
+  (* eol *)
+  CodeGen.EmitLn
+END EmitProcDecl;
+
+(* ------------------------------------------------------------------------
+ * Obsolete procedure DeclareProcedure -- replaced by EmitProcDecl
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE DeclareProcedure
+  (     extern,
+        isFunction   : BOOLEAN;
+        procMode     : CgBase.Mode;
+    VAR procName     : ARRAY OF CHAR;
+        procNumber   : SHORTCARD;
+        module       : CgBase.ModuleIndex;
+        level        : SHORTCARD;
+        parent       : CgBase.ProcIndex;
+    VAR ref          : CgBase.ProcIndex);
+
+BEGIN
   WITH ref^ DO
-     Extern := extern; IsFunction := isFunction;
-     Name := MakeRelSymb (ProcName); Number := ProcNumber;
-     Module := module; Level := level; Father := father;
+    Extern := extern;
+    IsFunction := isFunction;
+    Name := MakeRelSymb(procName);
+    Number := procNumber;
+    Module := module;
+    Level := level;
+    Father := parent
+  END; (* WITH *)
 
-     IF ProcNumber # CprocNumber THEN
+  IF ProcNumber # CprocNumber THEN
+    IF level = 0 THEN
+      StringAssign(t, module^.Name^)
+    ELSE
+      StringAssign(t, father^.Entry^)
+    END; (* IF *)
 
- 	IF level = 0 THEN
-	   StringAssign (t,module^.Name^);
-	ELSE
-	   StringAssign (t,father^.Entry^);
-	END;
+    IF StringLength(t)+1+StringLength(ProcName) >= 80 THEN
+      (* Produce Name and Number   *)
+      ConvertLONGINTtoString(ProcNumber, s);
+      StringAssign(t, module^.Name^);
+      StringAppend1(t, '_');
+      StringAppend1(t, ProcName);
+      StringAppend1(t, '_');
+      StringAppend1(t, s);
+    ELSE (* less than 80 chars *)
+      IF ProcNumber # CompUnitProcNumber THEN
+        StringAppend2(t, '_', ProcName);
+      END (* IF *)
+    END; (* IF *)
 
-        IF StringLength(t)+1+StringLength(ProcName)>=80 THEN
-	   (* Produce Name and Number   *)
-	   ConvertLONGINTtoString (ProcNumber,s);
-	   StringAssign (t,module^.Name^);
-	   StringAppend1(t,'_');
-	   StringAppend1(t,ProcName);
-	   StringAppend1(t,'_');
-	   StringAppend1(t,s);
-	ELSE
-	   IF ProcNumber # CompUnitProcNumber
-	     THEN StringAppend2 (t,'_',ProcName);
-	   END;
-	END;
-	Entry := MakeRelSymb (t);
-     ELSE (* ProcNumber = CprocNumber *)
-	IF Enabled (ElfOption) THEN
-	  Entry := MakeRelSymb (ProcName);
-	ELSE
-	  StringConcat2 (t,'_',ProcName);
-	  Entry := MakeRelSymb (t);
-	END;
-     END;
- CodeGen.EmitString('	.globl	');  CodeGen.EmitString( Entry^);  CodeGen.EmitLn;
-  END;
+    (*ref^.Entry*) Entry := MakeRelSymb (t);
+
+  ELSE (* ProcNumber = CprocNumber *)
+    IF Enabled (ElfOption) THEN
+      (*ref^.Entry*) Entry := MakeRelSymb (ProcName);
+    ELSE
+      StringConcat2 (t,'_',ProcName);
+      (*ref^.Entry*) Entry := MakeRelSymb (t);
+    END (* IF *)
+  END; (* IF *)
+
+  CodeGen.EmitString('	.globl	');
+  CodeGen.EmitString((*ref^.Entry*) Entry^);
+  CodeGen.EmitLn
 END DeclareProcedure;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure ComposeProcLabel (label, prefix, qualifier, ident)
+ * ------------------------------------------------------------------------
+ * Composes a  procedure label  by concatenating 'prefix',  'qualifier' and
+ * 'ident'.  Passes the result back  in 'label'.   An  input parameter  for
+ * which NUL is passed in will be ignored.  An input parameter whose length
+ * exceeds 39 characters is cut off, any excess characters will be ignored.
+ * A lowline ("_") is inserted between 'qualifier' and 'ident', if and only
+ * if both are non-empty.  The maximum label length is thus  80 characters.
+ * If the  capacity  of out-parameter 'label' is  insufficient  to hold the
+ * concatenation result and its NUL terminator,  the  operation is  aborted
+ * and an empty string is passed back in 'label'.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE ComposeProcLabel
+  ( VAR label   : ARRAY OF CHAR;
+        prefix  : CHAR;
+        qualifier,
+        ident   : ARRAY OF CHAR );
+
+CONST
+  (* the shortest possible label is an unqualified single letter identifier
+     which requires a capacity of two characters, including NUL terminator. *)
+  MinLabelCapacity = 2;
+
+  (* significant length of qualifiers and identifiers *)
+  SignificantChars = 39;
+
+VAR
+  ch : CHAR;
+  sourceIndex, maxSourceIndex, targetIndex, targetCapacity : CARDINAL;
+
+BEGIN
+  targetCapacity := HIGH(label);
+
+  (* if label capacity is below minimum, pass empty string and exit *)
+  IF targetCapacity < MinLabelCapacity THEN
+    label[0] := NUL;
+    RETURN
+  END; (* IF *)
+
+  targetIndex := 0;
+
+  (* copy prefix to label *)
+  IF prefix # NUL THEN
+    label[targetIndex] := prefix;
+    INC(targetIndex]
+  END; (* IF *)
+
+  (* copy qualifier to label *)
+  IF qualifier[0] # NUL THEN
+
+    sourceIndex := 0;
+    IF HIGH(qualifier) > SignificantChars THEN
+      maxSourceIndex := SignificantChars
+    ELSE
+      maxSourceIndex := HIGH(qualifier)
+    END; (* IF *)
+
+    WHILE sourceIndex <= maxSourceIndex DO
+
+      (* if no space left for terminator, pass empty string and exit *)
+      IF targetIndex >= targetCapacity THEN
+        label[0] := NUL;
+        RETURN
+      END; (* IF *)
+
+      (* get char from source *)
+      ch := qualifier[sourceIndex];
+
+      (* NUL terminates source *)
+      IF ch = NUL THEN
+        EXIT
+      END; (* IF *)
+
+      (* copy char to target *)
+      label[targetIndex] := ch;
+
+      (* move to next char *)
+      INC(sourceIndex);
+      INC(targetIndex)
+    END (* WHILE *)
+  END; (* IF *)
+
+  (* copy ident to label *)
+  IF ident[0] # NUL THEN
+
+    (* if qualifier present, append lowline to label *)
+    IF qualifier[0] # NUL THEN
+      label[targetIndex] := "_";
+      INC(targetIndex)
+    END; (* IF *)
+
+    sourceIndex := 0;
+    IF HIGH(ident) > SignificantChars THEN
+      maxSourceIndex := SignificantChars
+    ELSE
+      maxSourceIndex := HIGH(ident)
+    END; (* IF *)
+
+    WHILE sourceIndex <= maxSourceIndex DO
+
+      (* if no space left for terminator, pass empty string and exit *)
+      IF targetIndex >= targetCapacity THEN
+        label[0] := NUL;
+        RETURN
+      END; (* IF *)
+
+      (* get char from source *)
+      ch := ident[sourceIndex];
+
+      (* NUL terminates source *)
+      IF ch = NUL THEN
+        EXIT
+      END; (* IF *)
+
+      (* copy char to target *)
+      label[targetIndex] := ch;
+
+      (* move to next char *)
+      INC(sourceIndex);
+      INC(targetIndex)
+    END (* WHILE *)
+  END; (* IF *)
+
+  (* terminate label *)
+  label[targetIndex] := NUL;
+  RETURN
+END ComposeProcLabel;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure DeclareString  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE DeclareString
    (    length : SHORTCARD;
@@ -553,6 +978,10 @@ BEGIN
 END DeclareString;
 
 
+(* ------------------------------------------------------------------------
+ * Procedure DeclareTempo  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE DeclareTempo (mode: CgBase.Mode; VAR tempo: CgBase.Tempo);
 BEGIN
   IF mode = FloatLong
@@ -562,6 +991,11 @@ BEGIN
   tempo := -CurFrameSize;
 END DeclareTempo;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure DeclareTransferTempo  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE DeclareTransferTempo;
 BEGIN
   IF TransferTempo = NoTempo
@@ -569,7 +1003,12 @@ BEGIN
   END;
 END DeclareTransferTempo;
 
-PROCEDURE  BeginModule
+
+(* ------------------------------------------------------------------------
+ * Procedure BeginModule  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE BeginModule
    (AtModulName  :  ARRAY OF CHAR;
     AtFrameSize  :  LONGINT);
 BEGIN
@@ -607,55 +1046,90 @@ END BeginModule;
 
 (*------ end   insertion IpEmit_i ------*)
 
- VAR ai : CARDINAL;
-      localavail : RegisterSet;
+VAR
+  ai : CARDINAL;
+  localavail : RegisterSet;
 
 (******* empty insertion IpEmit *******)
-TYPE   NtAttributes = RECORD
-           CASE  : IR.NonTerminal OF
-    | ntreg : reg : RECORD
-     END;
-    | ntfreg : freg : RECORD
-     END;
-    | ntfstack : fstack : RECORD
-     END;
-    | ntConstant : Constant : RECORD
-     END;
-    | ntFloatConstant : FloatConstant : RECORD
-     END;
-    | ntSimpleVariable : SimpleVariable : RECORD
-     END;
-    | ntSymPlusOffset : SymPlusOffset : RECORD
-                     symbol  :  CgBase.RelSymb;
-     END;
-    | ntRegPlusSymPlusOffset : RegPlusSymPlusOffset : RECORD
-                     base  :  Register;
-                     symbol  :  CgBase.RelSymb;
-     END;
-    | ntOffsetPlusIndexMultFaktor : OffsetPlusIndexMultFaktor : RECORD
-                     index  :  Register;
-     END;
-    | ntmem : mem : RECORD
-                     am  :  MemAdr;
-     END;
-    | ntCMem : CMem : RECORD
-                     am  :  MemAdr;
-     END;
-    | ntRegOrIm : RegOrIm : RECORD
-                     am  :  AdrMode;
-     END;
-    | ntRegOrCMem : RegOrCMem : RECORD
-                     am  :  AdrMode;
-     END;
-    | ntRegOrCMemOrIm : RegOrCMemOrIm : RECORD
-                     am  :  AdrMode;
-     END;
-    | ntarglist : arglist : RECORD
-     END;
-    | ntloadln2 : loadln2 : RECORD
-     END;
-           END;
-   END;
+
+
+(* ------------------------------------------------------------------------
+ * Non-Terminal attribute type
+ * ------------------------------------------------------------------------ *)
+
+TYPE NtAttributes = RECORD
+  CASE  : IR.NonTerminal OF
+  | ntreg : reg :
+    RECORD (*empty*) END
+
+  | ntfreg : freg :
+    RECORD (*empty*) END
+
+  | ntfstack : fstack :
+    RECORD (*empty*) END
+
+  | ntConstant : Constant :
+    RECORD (*empty*) END
+
+  | ntFloatConstant : FloatConstant :
+    RECORD (*empty*) END
+
+  | ntSimpleVariable : SimpleVariable :
+    RECORD (*empty*) END
+
+  | ntSymPlusOffset : SymPlusOffset :
+    RECORD
+      symbol : CgBase.RelSymb;
+    END (* RECORD *)
+
+  | ntRegPlusSymPlusOffset : RegPlusSymPlusOffset :
+    RECORD
+      base : Register;
+      symbol : CgBase.RelSymb
+    END (* RECORD *)
+
+  | ntOffsetPlusIndexMultFaktor : OffsetPlusIndexMultFaktor :
+    RECORD
+      index : Register
+    END (* RECORD *)
+
+  | ntmem : mem :
+    RECORD
+      am : MemAdr
+    END (* RECORD *)
+
+  | ntCMem : CMem :
+    RECORD
+      am : MemAdr
+    END (* RECORD *)
+
+  | ntRegOrIm : RegOrIm :
+    RECORD
+      am : AdrMode
+    END (* RECORD *)
+
+  | ntRegOrCMem : RegOrCMem :
+    RECORD
+      am : AdrMode
+    END (* RECORD *)
+
+  | ntRegOrCMemOrIm : RegOrCMemOrIm :
+    RECORD
+      am : AdrMode
+    END (* RECORD *)
+
+  | ntarglist : arglist :
+    RECORD (*empty*) END
+
+  | ntloadln2 : loadln2 :
+    RECORD (*empty*) END
+  END (* CASE *)
+END; (* NtAttributes *)
+
+
+(* ------------------------------------------------------------------------
+ * Procedure PerformActions  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE PerformActions (ai : RegAlloc.AllocIndex);
 VAR i : CARDINAL;
@@ -687,35 +1161,99 @@ BEGIN
   END;
 END PerformActions;
 
-PROCEDURE WriteNest (i : INTEGER);
-VAR j : INTEGER;
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteNest
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteNest ( i : INTEGER );
+
+VAR
+  j : INTEGER;
+
 BEGIN
-   FOR j:=1 TO i DO WriteString ('.  '); END;
+  FOR j := 1 TO i DO
+    WriteString (".  ")
+  END (* FOR *)
 END WriteNest;
-PROCEDURE WriteAttrreg (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrreg  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrreg ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrreg;
-PROCEDURE WriteAttrfreg (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrfreg  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrfreg ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrfreg;
-PROCEDURE WriteAttrfstack (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrfstack  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrfstack ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrfstack;
-PROCEDURE WriteAttrConstant (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrConstant  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrConstant ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrConstant;
-PROCEDURE WriteAttrFloatConstant (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrFloatConstant  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrFloatConstant ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrFloatConstant;
-PROCEDURE WriteAttrSimpleVariable (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrFloatConstant  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrSimpleVariable ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrSimpleVariable;
-PROCEDURE WriteAttrSymPlusOffset (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrSymPlusOffset  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrSymPlusOffset ( at: NtAttributes );
 BEGIN
        WriteString ('symbol=');
        PrintRelSymb ( at.SymPlusOffset.symbol );
        Write (' ');
 END WriteAttrSymPlusOffset;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrRegPlusSymPlusOffset  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrRegPlusSymPlusOffset (at: NtAttributes);
 BEGIN
        WriteString ('base=');
@@ -725,59 +1263,113 @@ BEGIN
        PrintRelSymb ( at.RegPlusSymPlusOffset.symbol );
        Write (' ');
 END WriteAttrRegPlusSymPlusOffset;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrOffsetPlusIndexMultFaktor  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrOffsetPlusIndexMultFaktor (at: NtAttributes);
 BEGIN
        WriteString ('index=');
        PrintRegister ( at.OffsetPlusIndexMultFaktor.index );
        Write (' ');
 END WriteAttrOffsetPlusIndexMultFaktor;
-PROCEDURE WriteAttrmem (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrmem  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrmem ( at: NtAttributes );
 BEGIN
        WriteString ('am=');
        PrintMemAdr ( at.mem.am );
        Write (' ');
 END WriteAttrmem;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrCMem  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrCMem (at: NtAttributes);
 BEGIN
        WriteString ('am=');
        PrintMemAdr ( at.CMem.am );
        Write (' ');
 END WriteAttrCMem;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrRegOrIm  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrRegOrIm (at: NtAttributes);
 BEGIN
        WriteString ('am=');
        PrintAdrMode ( at.RegOrIm.am );
        Write (' ');
 END WriteAttrRegOrIm;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrRegOrCMem  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrRegOrCMem (at: NtAttributes);
 BEGIN
        WriteString ('am=');
        PrintAdrMode ( at.RegOrCMem.am );
        Write (' ');
 END WriteAttrRegOrCMem;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrRegOrCMemOrIm  --  needs reformatting
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrRegOrCMemOrIm (at: NtAttributes);
 BEGIN
        WriteString ('am=');
        PrintAdrMode ( at.RegOrCMemOrIm.am );
        Write (' ');
 END WriteAttrRegOrCMemOrIm;
-PROCEDURE WriteAttrarglist (at: NtAttributes);
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrarglist  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE WriteAttrarglist ( at: NtAttributes );
 BEGIN
+  (*empty*)
 END WriteAttrarglist;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure WriteAttrloadln2  --  does nothing
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE WriteAttrloadln2 (at: NtAttributes);
 BEGIN
+  (*empty*)
 END WriteAttrloadln2;
 
-PROCEDURE EmitNtreg (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
-    AT2   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtreg  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtreg
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
+  AT2   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntreg] OF
-   | 70 :
+  CASE e^.gcg^.rule [ntreg] OF
+  | 70 :
   EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -969,7 +1561,7 @@ BEGIN
 	e^.attr^.SetCompare.rel := RelEqual;
 	END;
  CodeGen.EmitString('	cmpl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 77 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -992,7 +1584,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cmpl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 78 :
   EmitNtfstack(e^.son[1],nest+1,AT0 );
@@ -1024,7 +1616,7 @@ BEGIN
 	END;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 79 :
   EmitNtCMem(e^.son[1],nest+1,AT0 );
@@ -1046,10 +1638,10 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 	PopFStack;
 
    | 80 :
@@ -1072,10 +1664,10 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompare.rel][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompare.rel][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 	PopFStack;
 
    | 81 :
@@ -1099,7 +1691,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompare.rel]][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompare.rel]][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 82 :
   EmitNtCMem(e^.son[1],nest+1,AT0 );
@@ -1121,8 +1713,8 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 83 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1144,8 +1736,8 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedCompare.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitChar(TAB);  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedCompare.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 84 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1171,12 +1763,12 @@ BEGIN
 	GetLabel(lab);
 	GetLabel(lab2);
 	IF e^.attr^.CheckL.CheckLwb THEN
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.LwbMode);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.CheckL.LwbMode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( lab2^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.LwbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.CheckL.LwbMode]]);  CodeGen.EmitTab;  CodeGen.EmitString( lab2^);  CodeGen.EmitLn;
 	END;
 	IF e^.attr^.CheckL.CheckUpb THEN
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.UpbMode);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLessOrEqual][SignedTable[e^.attr^.CheckL.UpbMode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.UpbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLessOrEqual][SignedTable[e^.attr^.CheckL.UpbMode]]);  CodeGen.EmitTab;  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
 	ELSE
  CodeGen.EmitString('	jmp	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
 	END;
@@ -1205,9 +1797,9 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(',(%esp)');  CodeGen.EmitLn;
+ CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(',(%esp)');  CodeGen.EmitLn;
  CodeGen.EmitString('	addl	$');  CodeGen.EmitInt( 2*SizeTable[e^.son[1]^.gcg^.reg.mode]);  CodeGen.EmitString(',%esp');  CodeGen.EmitLn;
 
    | 86 :
@@ -1244,7 +1836,7 @@ BEGIN
  CodeGen.EmitString('	.word	');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  CodeGen.EmitInt( e^.son[3]^.gcg^.Constant.val);  CodeGen.EmitLn;
 	END;
  CodeGen.EmitString('	.text');  CodeGen.EmitLn;
- CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
 
    | 87 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1306,9 +1898,9 @@ BEGIN
        END;
 
 	IF SignedTable[e^.attr^.Coerce.premode] AND SignedTable[e^.attr^.Coerce.postmode] THEN
- CodeGen.EmitString('	movs');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movs');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
 	ELSE
- CodeGen.EmitString('	movz');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movz');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
 	END;
 
    | 90 :
@@ -1396,7 +1988,7 @@ BEGIN
  CodeGen.EmitString('	movl	$-1,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	shll	%cl,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	notl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
  CodeGen.EmitString('	shll	%cl,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	orl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
@@ -1648,7 +2240,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cwd');  CodeGen.EmitLn;
- CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 105 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1670,8 +2262,8 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 106 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1694,7 +2286,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cdq');  CodeGen.EmitLn;
- CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 107 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1737,7 +2329,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cwd');  CodeGen.EmitLn;
- CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 109 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1759,8 +2351,8 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 110 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1783,7 +2375,7 @@ BEGIN
        END;
 
  CodeGen.EmitString('	cdq');  CodeGen.EmitLn;
- CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 111 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -1884,7 +2476,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	mul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	mul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 116 :
   EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,AT0 );
   EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,AT1 );
@@ -1906,8 +2498,8 @@ BEGIN
        END;
 
 EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[ai].reg);
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( e^.son[1]^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 117 :
   EmitNtConstant(e^.son[1],nest+1,AT0 );
@@ -1968,7 +2560,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 120 :
   EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
   EmitNtreg(e^.son[2],nest+1,AT1 );
@@ -1988,7 +2580,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 121 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
   EmitNtConstant(e^.son[2],nest+1,AT1 );
@@ -2049,8 +2641,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 124 :
   EmitNtConstant(e^.son[1],nest+1,AT0 );
@@ -2072,8 +2664,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 125 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -2094,7 +2686,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 126 :
   EmitNtConstant(e^.son[1],nest+1,AT0 );
   EmitNtreg(e^.son[2],nest+1,AT1 );
@@ -2114,7 +2706,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 127 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
   EmitNtConstant(e^.son[2],nest+1,AT1 );
@@ -2174,7 +2766,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	sub');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	sub');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 130 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
   EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
@@ -2194,7 +2786,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 131 :
   EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
   EmitNtreg(e^.son[2],nest+1,AT1 );
@@ -2214,7 +2806,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 132 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
@@ -2237,7 +2829,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
 	GetLabel (lab);
  CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedAbs.mode);  CodeGen.EmitString('	$0,');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedAbs.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	jg	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
- CodeGen.EmitString('	neg');  EmitSuffix( e^.attr^.FixedAbs.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedAbs.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	neg');  EmitSuffix( e^.attr^.FixedAbs.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedAbs.mode);  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 133 :
@@ -2259,7 +2851,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	neg');  EmitSuffix( e^.attr^.FixedNegate.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedNegate.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	neg');  EmitSuffix( e^.attr^.FixedNegate.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedNegate.mode);  CodeGen.EmitLn;
 
    | 134 :
        ai:=ai-1;
@@ -2298,7 +2890,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	mov');  EmitSuffix( e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitLn;
 
    | 136 :
   EmitNtmem(e,nest+1,AT0 );
@@ -2360,6 +2952,12 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
       END;
    END;                                           (* -- he 08/91 *)
 END EmitNtreg;
+
+
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtfreg  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitNtfreg (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
@@ -2660,13 +3258,13 @@ BEGIN
 	GetLabel(lab);
 	GetLabel(lab2);
 	IF e^.attr^.CheckL.CheckLwb THEN
- CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	jb	');  CodeGen.EmitString( lab2^);  CodeGen.EmitLn;
 	END;
 	IF e^.attr^.CheckL.CheckUpb THEN
- CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT2.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitMemAdr( AT2.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	jbe	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
@@ -2830,7 +3428,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fdivr');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fdivr');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 155 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
   EmitNtCMem(e^.son[2],nest+1,AT1 );
@@ -2850,7 +3448,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fdiv');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fdiv');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 156 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
   EmitNtfstack(e^.son[2],nest+1,AT1 );
@@ -2910,7 +3508,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 159 :
   EmitNtCMem(e^.son[1],nest+1,AT0 );
   EmitNtfreg(e^.son[2],nest+1,AT1 );
@@ -2930,7 +3528,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 160 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
   EmitNtfstack(e^.son[2],nest+1,AT1 );
@@ -2990,7 +3588,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fsubr');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fsubr');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 163 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
   EmitNtCMem(e^.son[2],nest+1,AT1 );
@@ -3010,7 +3608,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fsub');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fsub');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 164 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
   EmitNtfstack(e^.son[2],nest+1,AT1 );
@@ -3070,7 +3668,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 167 :
   EmitNtCMem(e^.son[1],nest+1,AT0 );
   EmitNtfreg(e^.son[2],nest+1,AT1 );
@@ -3090,7 +3688,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 168 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
@@ -3131,7 +3729,7 @@ BEGIN
 
 	PushFStack;
  CodeGen.EmitString('	fld');  EmitSuffix( e^.gcg^.CMem.mode);
- CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
 
    END;
    IF IR.OptEmitMatch THEN
@@ -3165,6 +3763,11 @@ BEGIN
    END;                                           (* -- he 08/91 *)
 END EmitNtfreg;
 
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtfstack  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
 PROCEDURE EmitNtfstack (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
 VAR
@@ -3191,7 +3794,7 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString('					/* Kettenregel ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitString(' -> ');  EmitRegister(RegAlloc.allocation[ai].reg);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
 	END;
 
@@ -3226,6 +3829,11 @@ BEGIN
       END;
    END;                                           (* -- he 08/91 *)
 END EmitNtfstack;
+
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtConstant  --  needs clean up
+ * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitNtConstant (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
@@ -3681,14 +4289,18 @@ BEGIN
    END;
 END EmitNtConstant;
 
-PROCEDURE EmitNtFloatConstant (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtFloatConstant  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtFloatConstant
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntFloatConstant] OF
-   | 194 :
+  CASE e^.gcg^.rule [ntFloatConstant] OF
+  | 194 :
   EmitNtConstant(e^.son[1]^.son[2],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -3827,16 +4439,20 @@ BEGIN
    END;
 END EmitNtFloatConstant;
 
-PROCEDURE EmitNtSimpleVariable (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
-    AT2   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtSimpleVariable  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtSimpleVariable
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
+  AT2   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntSimpleVariable] OF
-   | 201 :
+  CASE e^.gcg^.rule [ntSimpleVariable] OF
+  | 201 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
   EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1]^.son[1],nest+1,AT1 );
   EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
@@ -4062,15 +4678,19 @@ BEGIN
    END;
 END EmitNtSimpleVariable;
 
-PROCEDURE EmitNtSymPlusOffset (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtSymPlusOffset  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtSymPlusOffset
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntSymPlusOffset] OF
-   | 212 :
+  CASE e^.gcg^.rule [ntSymPlusOffset] OF
+  | 212 :
   EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -4230,15 +4850,19 @@ BEGIN
    END;
 END EmitNtSymPlusOffset;
 
-PROCEDURE EmitNtRegPlusSymPlusOffset (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtRegPlusSymPlusOffset  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtRegPlusSymPlusOffset
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes);
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntRegPlusSymPlusOffset] OF
-   | 220 :
+  CASE e^.gcg^.rule [ntRegPlusSymPlusOffset] OF
+  | 220 :
   EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -4546,15 +5170,19 @@ BEGIN
    END;
 END EmitNtRegPlusSymPlusOffset;
 
-PROCEDURE EmitNtOffsetPlusIndexMultFaktor (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtOffsetPlusIndexMultFaktor  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtOffsetPlusIndexMultFaktor
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntOffsetPlusIndexMultFaktor] OF
-   | 234 :
+  CASE e^.gcg^.rule [ntOffsetPlusIndexMultFaktor] OF
+  | 234 :
   EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -4742,12 +5370,16 @@ BEGIN
    END;
 END EmitNtOffsetPlusIndexMultFaktor;
 
-PROCEDURE EmitNtmem (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtmem  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtmem
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
 BEGIN
    CASE e^.gcg^.rule [ntmem] OF
    | 243 :
@@ -5157,14 +5789,18 @@ BEGIN
    END;
 END EmitNtmem;
 
-PROCEDURE EmitNtCMem (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtCMem  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtCMem
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntCMem] OF
-   | 259 :
+  CASE e^.gcg^.rule [ntCMem] OF
+  | 259 :
   EmitNtRegOrIm(e^.son[1],nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -5190,7 +5826,7 @@ BEGIN
 	resAttributes.CMem.am.index	:= RegNil;
 	resAttributes.CMem.am.symbol	:= NullSymb;
  CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Coerce.premode);
- CodeGen.EmitChar(TAB);  EmitAdrMode( AT0.RegOrIm.am); CodeGen.EmitChar(',');
+ CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrIm.am); CodeGen.EmitChar(',');
  EmitMemAdr( resAttributes.CMem.am);  CodeGen.EmitLn;
 
    | 260 :
@@ -5219,7 +5855,7 @@ BEGIN
 	resAttributes.CMem.am.index	:= RegNil;
 	resAttributes.CMem.am.symbol	:= NullSymb;
  CodeGen.EmitString('	fstp');  EmitSuffix( e^.attr^.Coerce.premode);
- CodeGen.EmitChar(TAB); EmitMemAdr( resAttributes.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitTab; EmitMemAdr( resAttributes.CMem.am);  CodeGen.EmitLn;
 	PopFStack;
 
    | 261 :
@@ -5361,11 +5997,15 @@ BEGIN
    END;
 END EmitNtCMem;
 
-PROCEDURE EmitNtRegOrIm (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtRegOrIm  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtRegOrIm
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
 BEGIN
    CASE e^.gcg^.rule [ntRegOrIm] OF
    | 266 :
@@ -5418,14 +6058,18 @@ BEGIN
    END;
 END EmitNtRegOrIm;
 
-PROCEDURE EmitNtRegOrCMem (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtRegOrCMem  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtRegOrCMem
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntRegOrCMem] OF
-   | 268 :
+  CASE e^.gcg^.rule [ntRegOrCMem] OF
+  | 268 :
   EmitNtCMem(e,nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -5475,14 +6119,18 @@ BEGIN
    END;
 END EmitNtRegOrCMem;
 
-PROCEDURE EmitNtRegOrCMemOrIm (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtRegOrCMemOrIm  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtRegOrCMemOrIm
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntRegOrCMemOrIm] OF
-   | 270 :
+  CASE e^.gcg^.rule [ntRegOrCMemOrIm] OF
+  | 270 :
   EmitNtConstant(e,nest+1,AT0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -5535,15 +6183,19 @@ BEGIN
    END;
 END EmitNtRegOrCMemOrIm;
 
-PROCEDURE EmitNtarglist (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtarglist  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtarglist
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
+  AT0   :  NtAttributes;
+  AT1   :  NtAttributes;
 BEGIN
-   CASE e^.gcg^.rule [ntarglist] OF
-   | 272 :
+  CASE e^.gcg^.rule [ntarglist] OF
+  | 272 :
   EmitNtarglist(e^.son[1],nest+1,AT0 );
   EmitNtreg(e^.son[2],nest+1,AT1 );
        ai:=ai-1;
@@ -5714,10 +6366,14 @@ BEGIN
    END;
 END EmitNtarglist;
 
-PROCEDURE EmitNtloadln2 (e : IR.Expression; nest : INTEGER
-       ; VAR resAttributes : NtAttributes);
-VAR
 
+(* ------------------------------------------------------------------------
+ * Procedure EmitNtloadln2  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitNtloadln2
+  ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+VAR
 BEGIN
    CASE e^.gcg^.rule [ntloadln2] OF
    | 279 :
@@ -5749,7 +6405,12 @@ BEGIN
    END;
 END EmitNtloadln2;
 
-PROCEDURE EmitStatement (e : IR.Expression);
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitStatement  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitStatement ( e : IR.Expression );
 CONST nest = 0;
 VAR
     AT0   :  NtAttributes;
@@ -5787,7 +6448,7 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
  CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);
- CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 2 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
   EmitNtfreg(e^.son[2],nest+1,AT1 );
@@ -5806,7 +6467,7 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
- CodeGen.EmitString('	fstp');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fstp');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
 	PopFStack;
 
      | 3 :
@@ -5851,7 +6512,7 @@ BEGIN
 	tr2.r := e^.son[2]^.gcg^.FloatConstant.val;
  CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c2);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
 	INC (AT0.mem.am.offset, 4);
- CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(TAB);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitTab;  CodeGen.EmitLn;
 
      | 5 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
@@ -6022,7 +6683,7 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Inc1.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Inc1.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 11 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
@@ -6039,7 +6700,7 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Dec1.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Dec1.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 12 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
   EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
@@ -6057,7 +6718,7 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Inc2.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Inc2.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 13 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
   EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
@@ -6075,7 +6736,7 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Dec2.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Dec2.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 14 :
   EmitNtmem(e^.son[1],nest+1,AT0 );
   EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
@@ -6166,7 +6827,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 19 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6188,7 +6849,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 20 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6210,7 +6871,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 21 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6232,7 +6893,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 22 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6276,7 +6937,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 24 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6298,7 +6959,7 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 25 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6402,9 +7063,9 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitChar(TAB);  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 30 :
   EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
@@ -6744,9 +7405,9 @@ BEGIN
  CodeGen.EmitString('	.text');  CodeGen.EmitLn;
 	CurRoundMode := RndUnknown;
  CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.lwb);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
  CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.upb - e^.attr^.SwitchL.lwb);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelGreater][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelGreater][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
  CodeGen.EmitString('	jmp	*');  CodeGen.EmitString( lab^);  CodeGen.EmitString('(,');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitString(',4)');  CodeGen.EmitLn;
 
      | 45 :
@@ -6812,8 +7473,8 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 48 :
   EmitNtCMem(e^.son[1],nest+1,AT0 );
@@ -6834,8 +7495,8 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitChar(TAB);  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 49 :
   EmitNtConstant(e^.son[1],nest+1,AT0 );
@@ -6857,7 +7518,7 @@ BEGIN
 
 	CurRoundMode := RndUnknown;
  CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompareAndBranch.rel]][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompareAndBranch.rel]][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 50 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
@@ -6878,10 +7539,10 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompareAndBranch.rel][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompareAndBranch.rel][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 	PopFStack;
 
      | 51 :
@@ -6903,10 +7564,10 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitChar(TAB);  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 	PopFStack;
 
      | 52 :
@@ -6938,7 +7599,7 @@ BEGIN
 	END;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 53 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -6960,7 +7621,7 @@ BEGIN
 
 	CurRoundMode := RndUnknown;
  CodeGen.EmitString('	cmpl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 54 :
   EmitNtreg(e^.son[1],nest+1,AT0 );
@@ -6997,7 +7658,7 @@ BEGIN
 	e^.attr^.SetCompareAndBranch.rel := RelEqual;
 	END;
  CodeGen.EmitString('	cmpl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitChar(TAB);  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 55 :
   EmitNtRegOrIm(e^.son[1],nest+1,AT0 );
@@ -7287,7 +7948,7 @@ BEGIN
  CodeGen.EmitString('	pushl %ebx');  CodeGen.EmitLn;
      END;
 
-     IF Kommentar THEN
+     IF EmitAnnotations THEN
  CodeGen.EmitString('	/* --------------------------------------------------------- */');  CodeGen.EmitLn;
  CodeGen.EmitString('	/* Level : ');  CodeGen.EmitInt( CurLevel);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
  CodeGen.EmitString('	/* --------------------------------------------------------- */');  CodeGen.EmitLn;
@@ -7309,7 +7970,7 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString('	/* Copy Open Array Begin */');  CodeGen.EmitLn;
 	END;
    IF (e^.attr^.CopyOpenArray.elemsize # ByteSize) & ODD (e^.attr^.CopyOpenArray.elemsize) THEN INC (e^.attr^.CopyOpenArray.elemsize); END;
@@ -7348,7 +8009,7 @@ BEGIN
  CodeGen.EmitString('	cld');  CodeGen.EmitLn;
  CodeGen.EmitString('	repz');  CodeGen.EmitLn;
  CodeGen.EmitString('	movsl');  CodeGen.EmitLn;
-	IF Kommentar THEN
+	IF EmitAnnotations THEN
  CodeGen.EmitString('	/* Copy Open Array End */');  CodeGen.EmitLn;
 	END;
 
@@ -7446,7 +8107,7 @@ BEGIN
 
 	SaveDisplay [CurLevel] := FALSE;
 	CurFrameSize :=   4 * ((ABS(CurFrameSize)+3) DIV 4);
- CodeGen.EmitChar(TAB);  CodeGen.EmitString( ProcLabel^);  CodeGen.EmitString(' = ');  CodeGen.EmitInt( CurFrameSize);  CodeGen.EmitLn;
+ CodeGen.EmitTab;  CodeGen.EmitString( ProcLabel^);  CodeGen.EmitString(' = ');  CodeGen.EmitInt( CurFrameSize);  CodeGen.EmitLn;
 
      | 68 :
     IF (RegAlloc.allocation [1]. num>0) THEN
@@ -7506,7 +8167,12 @@ BEGIN
   END;
 END EmitStatement;
 
-PROCEDURE EmitInstruction (e : IR.Expression);
+
+(* ------------------------------------------------------------------------
+ * Procedure EmitInstruction  --  needs clean up
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitInstruction ( e : IR.Expression );
 BEGIN
    IF IR.OptEmitIR THEN IR.PrintExpression (e); END;
 (*++++++ start insertion IpEmitI1 ++++++*)
@@ -7519,9 +8185,17 @@ BEGIN
 (******* empty insertion IpEmitI2 *******)
    EmitStatement (e);
 END EmitInstruction;
- VAR  RegisterSetEmpty : RegisterSet;
-BEGIN
+
+
+
+(* MODULE Initialisation *)
+
+VAR
+  RegisterSetEmpty : RegisterSet;
+
+BEGIN (* Emit *)
   RegisterSetEmpty [0] := {};
+
 (*++++++ start insertion IpEmitInit ++++++*)
 
     SizeTable [UnsignedByte] := ByteSize;
@@ -7591,7 +8265,5 @@ BEGIN
     DefineOption (oCCall, 'CcallsMocka', FALSE, FALSE);
     DefineOption (ElfOption, 'elf', FALSE, TRUE);
     DefineOption (oAssemblerListing, 'S', FALSE, TRUE);
-
-
 (*------ end   insertion IpEmitInit ------*)
 END Emit.
