@@ -3,7 +3,7 @@ MOCKA Modula-2 Compiler System, originally by GMD
 
 Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 
-Extends the language with:
+### Language Extensions
 * Conditional compilation directives
 * Types BYTE, SHORTCARD, SHORTINT, LONGCARD
 * FOREIGN DEFINITION MODULE for interfacing to C
