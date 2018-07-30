@@ -277,8 +277,10 @@ BEGIN
     RETURN
   END; (* IF *)
 
-  (* limit repeat count *)
-  IF n > MaxCharRepeat THEN
+  (* assure n is in range [1..128] *)
+  IF n = 0 THEN
+    RETURN
+  ELSIF n > MaxCharRepeat THEN
     m := MaxCharRepeat
   ELSE
     m := n

@@ -87,7 +87,7 @@ PROCEDURE EmitChar ( ch : CHAR );
 
 
 (* ------------------------------------------------------------------------
- * Public procedure EmitCharNTimes(ch, n)
+ * Procedure CodeGen.EmitCharNTimes(ch, n)
  * ------------------------------------------------------------------------
  * Writes character 'ch' 'n' times to output buffer, where n <= 128.
  * Interprets ASCII TAB.  Ignores all other control characters.
