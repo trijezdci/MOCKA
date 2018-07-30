@@ -33,7 +33,7 @@ TYPE Token = (
 
   (* information options *)
 
-  Help,             (* --help *)
+  Help,             (* --help, -h *)
   Version,          (* --version *)
   Copyright,        (* --copyright *)
 
@@ -46,21 +46,21 @@ TYPE Token = (
 
   (* safety options *)
 
-  IndexChecks,      (* --index-checks *)
-  NoIndexChecks,    (* --no-index-checks *)
-  RangeChecks,      (* --range-checks *)
-  NoRangeChecks,    (* --no-range-checks *)
+  IndexChecks,      (* --index-checks, -I *)
+  NoIndexChecks,    (* --no-index-checks, -i *)
+  RangeChecks,      (* --range-checks, -R *)
+  NoRangeChecks,    (* --no-range-checks, -r *)
 
   (* product options *)
 
   Elf,              (* --elf *)
   MachO,            (* --mach-o *)
-  KeepAsm,          (* --keep-asm *)
-  PurgeAsm,         (* --purge-asm *)
-  Build,            (* --build *)
-  NoBuild,          (* --no-build *)
-  Static,           (* --static *)
-  NoStatic,         (* --no-static *)
+  KeepAsm,          (* --keep-asm, -A *)
+  PurgeAsm,         (* --purge-asm, -a *)
+  Build,            (* --build, -B *)
+  NoBuild,          (* --no-build, -b *)
+  Static,           (* --static, -S *)
+  NoStatic,         (* --no-static, -s *)
 
   (* source file name *)
 
@@ -68,15 +68,15 @@ TYPE Token = (
 
   (* diagnostic options *)
 
-  Debug,            (* --debug *)
-  NoDebug,          (* --no-debug *)
-  Verbose,          (* --verbose *)
+  Debug,            (* --debug, -D *)
+  NoDebug,          (* --no-debug, -d *)
+  Verbose,          (* --verbose, -v *)
   ShowSettings,     (* --show-settings *)
 
   (* path options *)
 
-  LibPath,       (* --lib-path *)
-  WorkDir,       (* --work-dir *)
+  LibPath,       (* --lib-path, -L *)
+  WorkDir,       (* --work-dir, -W *)
 
   (* end of input sentinel *)
 

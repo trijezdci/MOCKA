@@ -406,6 +406,31 @@ BEGIN
   len := strLen(lexeme);
 
   CASE len OF
+
+  (* short options *)
+
+  | 2 : (* -A, -B, -D, -I, -L, -R, -S, -W, -a, -b, -d, -h, -i, -r, -s, -v *)
+    CASE lexeme[1] OF
+    | "A" : (* -A *) RETURN KeepAsm
+    | "B" : (* -B *) RETURN Build
+    | "D" : (* -D *) RETURN Debug
+    | "I" : (* -I *) RETURN IndexChecks
+    | "L" : (* -L *) RETURN LibPath
+    | "R" : (* -R *) RETURN RangeChecks
+    | "S" : (* -S *) RETURN Static
+    | "W" : (* -W *) RETURN WorkDir
+    | "a" : (* -a *) RETURN PurgeAsm
+    | "b" : (* -b *) RETURN NoBuild
+    | "d" : (* -d *) RETURN NoDebug
+    | "h" : (* -h *) RETURN Help
+    | "i" : (* -i *) RETURN NoIndexChecks
+    | "r" : (* -r *) RETURN NoRangeChecks
+    | "s" : (* -s *) RETURN NoStatic
+    | "v" : (* -v *) RETURN Verbose
+    END (* CASE *)
+
+  (* long options *)
+
   | 5 : (* --elf *)
     IF strMatches(lexeme, ArgStrElf) THEN
       RETURN Elf
