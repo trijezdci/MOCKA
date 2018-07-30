@@ -19,41 +19,41 @@ Status July 2018
 
 ### Command Line Options
 
-`--index-checks` add code to check array bounds (default)
+`--index-checks`, `-I` add code to check array bounds (default)
 
-`--no-index-checks` do not add code to check array bounds
+`--no-index-checks`, `-i` do not add code to check array bounds
 
-`--range-checks` add code for numeric type range checking (default)
+`--range-checks`, `-R` add code for numeric type range checking (default)
 
-`--no-range-checks` do not add code for numeric type range checking
+`--no-range-checks`, `-r` do not add code for numeric type range checking
 
 `--elf`     for ELF object file output (default)
 
 `--mach-o`  for Mach-O object file output
 
-`--keep-asm`  keep .s files after compilation (default)
+`--keep-asm`, `-A`  keep assembly files after compilation (default)
 
-`--purge-asm`  purge .s files after compilation
+`--purge-asm`, `-a`  purge assembly files after compilation
 
-`--build` compile and link (default)
+`--build`, `-B` compile and link (default)
 
-`--no-build` compile only
+`--no-build`, `-b` compile only
 
-`--static` static linking (default)
+`--static`, `-S` static linking (default)
 
-`--no-static` dynamic linking
+`--no-static`, `-s` dynamic linking
 
-`--debug` add debugging information (default)
+`--debug`, `-D` add debugging information (default)
 
-`--no-debug` strip debugging information
+`--no-debug`, `-d` strip debugging information
 
-`--verbose`  print more details during compilation (obsoletes -blip)
+`--verbose`, `-v`  print more details during compilation (obsoletes -blip)
 
 `--show-settings` show compiler settings
 
-`--lib-path` set library search path
+`--lib-path`, `-L` set library search path
 
-`--working-dir` set working directory (for output)
+`--working-dir`, `-W` set working directory (for output)
 
 ### Mach-O Support
 
