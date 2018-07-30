@@ -41,26 +41,28 @@ VAR options, modifiedOptions : OptionSet;
  * Sets all compiler options to their default values.
  *
  * Defaults
- *  IndexChecks  : on
- *  RangeChecks  : on
- *  Elf          : on
- *  MachO        : off
- *  KeepAsm      : on
- *  Build        : on
- *  Static       : on
- *  Debug        : on
- *  Verbose      : off
- *  ShowSettings : off
+ *  OctalLiterals  : off
+ *  SynonymSymbols : off
+ *  IndexChecks    : on
+ *  RangeChecks    : on
+ *  Elf            : on
+ *  MachO          : off
+ *  KeepAsm        : on
+ *  Build          : on
+ *  Static         : on
+ *  Debug          : on
+ *  Verbose        : off
+ *  ShowSettings   : off
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE ApplyDefaults;
 
-BEGIN  
+BEGIN
   (* reset options set *)
   options :=
-    OptionSet { DefaultObjFormat, IndexChecks, RangeChecks, Debug, Build,
+    OptionSet { IndexChecks, RangeChecks, DefaultObjFormat, Debug, Build,
       KeepAsm, Static };
-  
+
   (* reset modified options set *)
   modifiedOptions := OptionSet { }
 END ApplyDefaults;
@@ -95,17 +97,17 @@ BEGIN
   | Elf :
     SetFlag(Elf, value);
     SetFlag(MachO, NOT value) (* Elf disables MachO *)
-    
+
   | MachO :
     SetFlag(MachO, value);
     SetFlag(Elf, NOT value) (* MachO disables Elf *)
-    
+
   | Static :
     (* option static only applies when build is on *)
     IF (value = TRUE) AND (Build IN optionSet) THEN
       SetFlag(Static, TRUE)
     END (* IF *)
-    
+
   ELSE (* all other options *)
     SetFlag(option, value)
   END (* CASE *)
@@ -141,7 +143,7 @@ BEGIN
   ELSE
     EXCL(options, option)
   END; (* IF *)
-  
+
   (* remember modification status *)
   INCL(modifiedOptions, option)
 END SetFlag;

@@ -41,34 +41,34 @@ VAR
 
 BEGIN
   token := MockaArgLexer.nextToken();
-  
+
   IF MockaArgLexer.isInfoRequest(token) THEN
     (* infoRequest | *)
     token := parseInfoRequest(token)
-    
+
   ELSIF MockaArgLexer.isCompilationRequest(token) THEN
     (* compilationRequest *)
     token := parseCompilationRequest(token);
-    
+
     LOOP (* (diagOption | pathOption)* *)
       IF MockaArgLexer.isDiagOption(token) THEN
         token := parseDiagOption(token)
-        
+
       ELSIF MockaArgLexer.isPathOption(token) THEN
         token := parsePathOption(token);
-        
+
       ELSE (* neither diagnostic nor path option *)
         EXIT
       END (* IF *)
     END; (* LOOP *)
-    
+
     (* EndOfInput *)
     WHILE token # MockaArgLexer.EndOfInput DO
       ReportExcessArg(MockaArgLexer.lastArg());
       token := MockaArgLexer.nextToken()
     END (* WHILE *)
   END; (* IF *)
-  
+
   RETURN status
 END parseArgs;
 
@@ -89,17 +89,17 @@ BEGIN
   (* --help *)
   | MockaArgLexer.Help :
     status := HelpRequested
-      
+
   (* --version *)
   | MockaArgLexer.Version :
     status := VersionRequested
-  
+
   (* --copyright *)
   | MockaArgLexer.Copyright :
     status := CopyrightRequested
-  
+
   END; (* CASE *)
-  
+
   RETURN MockaArgLexer.nextToken()
 END parseInfoRequest;
 
@@ -108,7 +108,7 @@ END parseInfoRequest;
  * private function parseCompilationRequest(token)
  * ------------------------------------------------------------------------
  * compilationRequest :=
- *   (safetyOption | productOption)* sourceFile
+ *   (syntaxOption | safetyOption | productOption)* sourceFile
  *   ;
  * ------------------------------------------------------------------------ *)
 
@@ -117,31 +117,70 @@ PROCEDURE parseCompilationRequest
 
 VAR
   token := MockaArgLexer.Token;
-  
+
 BEGIN
-  LOOP (* (safetyOption | productOption)* *)
-    IF MockaArgLexer.isSafetyOption(token) THEN
+  LOOP (* (syntaxOption| safetyOption | productOption)* *)
+    IF MockaArgLexer.isSyntaxOption(token) THEN
+      token := parseSyntaxOption
+
+    ELSIF MockaArgLexer.isSafetyOption(token) THEN
       token := parseSafetyOption
-      
+
     ELSIF MockaArgLexer.isProductOption(token) THEN
       token := parseProductOption(token)
-      
+
     ELSE (* neither safety nor product option *)
       EXIT
     END (* IF *)
   END; (* LOOP *)
-  
+
   (* sourceFile *)
   IF token = MockaArgLexer.SourceFile THEN
     MockaSettings.SetInfile(MockaArgLexer.lastArg());
     token := MockaArgLexer.nextToken()
-    
+
   ELSE (* no source file specified *)
     ReportMissingSourceFile()
   END; (* IF *)
-  
+
   RETURN token
 END parseCompilationRequest;
+
+
+(* ------------------------------------------------------------------------
+ * private function parseSyntaxOption(token)
+ * ------------------------------------------------------------------------
+ * syntaxOption :=
+ *   --octal-literals | --no-octal-literals |
+ *   --synonym-symbols | --no-synonym-symbols
+ *   ;
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE parseSyntaxOption
+  ( token : MockaArgLexer.Token ) : MockaArgLexer.Token;
+
+BEGIN
+  CASE token OF
+  (* --octal-literals *)
+  | MockaArgLexer.OctalLiterals :
+    SetOption(MockaOptions.OctalLiterals, TRUE)
+
+  (*--no-octal-literals *)
+  | MockaArgLexer.NoOctalLiterals :
+    SetOption(MockaOptions.OctalLiterals, FALSE)
+
+  (* --synonym-symbols *)
+  | MockaArgLexer.SynonymSymbols :
+    SetOption(MockaOptions.SynonymSymbols, TRUE)
+
+  (*  --no-synonym-symbols *)
+  | MockaArgLexer.NoSynonymSymbols :
+    SetOption(MockaOptions.SynonymSymbols, FALSE)
+
+  END; (* CASE *)
+
+  RETURN MockaArgLexer.nextToken()
+END parseSyntaxOption;
 
 
 (* ------------------------------------------------------------------------
@@ -155,27 +194,27 @@ END parseCompilationRequest;
 
 PROCEDURE parseSafetyOption
   ( token : MockaArgLexer.Token ) : MockaArgLexer.Token;
-  
+
 BEGIN
   CASE token OF
   (* --index-checks *)
   | MockaArgLexer.IndexChecks :
     SetOption(MockaOptions.IndexChecks, TRUE)
-    
+
   (* --no-index-checks *)
   | MockaArgLexer.NoIndexChecks :
     SetOption(MockaOptions.IndexChecks, FALSE)
-    
+
   (* --range-checks *)
   | MockaArgLexer.RangeChecks :
     SetOption(MockaOptions.RangeChecks, TRUE)
-    
+
   (* --no-range-checks *)
   | MockaArgLexer.NoRangeChecks :
     SetOption(MockaOptions.RangeChecks, FALSE)
-    
+
   END; (* CASE *)
-  
+
   RETURN MockaArgLexer.nextToken()
 END parseSafetyOption;
 
@@ -191,45 +230,45 @@ END parseSafetyOption;
 
 PROCEDURE parseProductOption
   ( token : MockaArgLexer.Token ) : MockaArgLexer.Token;
-  
+
 (* TO DO : check for, ignore and report duplicates *)
-  
+
 BEGIN
   CASE token OF
   (* --elf *)
   | MockaArgLexer.Elf :
     SetOption(MockaOptions.Elf, TRUE)
-    
+
   (* --mach-o *)
   | MockaArgLexer.MachO :
     SetOption(MockaOptions.MachO, TRUE)
-    
+
   (* --keep-asm *)
   | MockaArgLexer.KeepAsm :
     SetOption(MockaOptions.KeepAsm, TRUE)
-  
+
   (* --purge-asm *)
   | MockaArgLexer.PurgeAsm :
     SetOption(MockaOptions.KeepAsm, FALSE)
-  
+
   (* --build *)
   | MockaArgLexer.Build :
     SetOption(MockaOptions.Build, TRUE)
-  
+
   (* --no-build *)
   | MockaArgLexer.NoBuild :
     SetOption(MockaOptions.NoBuild, FALSE)
-  
+
   (* --static *)
   | MockaArgLexer.Static :
     SetOption(MockaOptions.Static, TRUE)
-  
+
   (* --no-static *)
   | MockaArgLexer.NoStatic :
     SetOption(MockaOptions.NoStatic, FALSE)
-  
+
   END; (* CASE *)
-  
+
   RETURN MockaArgLexer.nextToken()
 END parseProductOption;
 
@@ -268,27 +307,27 @@ END parseSourceFile;
 
 PROCEDURE parseDiagOption
   ( token : MockaArgLexer.Token ) : MockaArgLexer.Token;
-  
+
 BEGIN
   CASE token OF
   (* --debug *)
   | MockaArgLexer.Debug :
     SetOption(MockaOptions.Debug, TRUE)
-    
+
   (* --no-debug *)
   | MockaArgLexer.NoDebug :
     SetOption(MockaOptions.Debug, FALSE)
-    
+
   (* --verbose *)
   | MockaArgLexer.Verbose :
     SetOption(MockaOptions.Verbose, TRUE)
-    
+
   (* --show-settings *)
   | MockaArgLexer.ShowSettings :
     SetOption(MockaOptions.ShowSettings, TRUE)
-    
+
   END; (* CASE *)
-  
+
   RETURN MockaArgLexer.nextToken()
 END parseDiagOption;
 

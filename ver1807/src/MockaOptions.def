@@ -26,22 +26,27 @@ DEFINITION MODULE MockaOptions;
  * ------------------------------------------------------------------------ *)
 
 TYPE Option = (
-    
+
+  (* syntax options *)
+
+  OctalLiterals,  (* --octal-literals, --no-octal-literals *)
+  SynonymSymbols, (* --synonym-symbols, --no-synonym-symbols *)
+
   (* safety options *)
-    
+
   IndexChecks,    (* --index-checks, --no-index-checks *)
   RangeChecks,    (* --range-checks, --no-range-checks *)
-  
+
   (* product options *)
-  
+
   Elf,            (* --elf *)
   MachO,          (* --mach-o *)
   KeepAsm,        (* --keep-asm, --purge-asm *)
   Build,          (* --build, --no-build *)
   Static,         (* --static, --no-static *)
-  
+
   (* diagnostic options *)
-  
+
   Debug,          (* --debug, --no-debug *)
   Verbose,        (* --verbose *)
   ShowSettings ); (* --show-settings *)
@@ -60,16 +65,18 @@ CONST DefaultObjFormat = Elf; (* may be either Elf or MachO *)
  * Sets all compiler options to their default values.
  *
  * Defaults
- *  IndexChecks  : on
- *  RangeChecks  : on
- *  Elf          : on
- *  MachO        : off
- *  KeepAsm      : on
- *  Build        : on
- *  Static       : on
- *  Debug        : on
- *  Verbose      : off
- *  ShowSettings : off
+ *  OctalLiterals  : off
+ *  SynonymSymbols : off
+ *  IndexChecks    : on
+ *  RangeChecks    : on
+ *  Elf            : on
+ *  MachO          : off
+ *  KeepAsm        : on
+ *  Build          : on
+ *  Static         : on
+ *  Debug          : on
+ *  Verbose        : off
+ *  ShowSettings   : off
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE ApplyDefaults;

@@ -28,61 +28,68 @@ DEFINITION MODULE MockaArgLexer;
 TYPE Token = (
 
   (* invalid argument *)
-  
+
   Invalid,
 
   (* information options *)
-  
-  Help,          (* --help *)
-  Version,       (* --version *)
-  Copyright,     (* --copyright *)
-  
+
+  Help,             (* --help *)
+  Version,          (* --version *)
+  Copyright,        (* --copyright *)
+
+  (* syntax options *)
+
+  OctalLiterals,    (* --octal-literals *)
+  NoOctalLiterals,  (* --no-octal-literals *)
+  SynonymSymbols,   (* --synonym-symbols *)
+  NoSynonymSymbols, (* --no-synonym-symbols *)
+
   (* safety options *)
-  
-  IndexChecks,   (* --index-checks *)
-  NoIndexChecks, (* --no-index-checks *)
-  RangeChecks,   (* --range-checks *)
-  NoRangeChecks, (* --no-range-checks *)
-  
+
+  IndexChecks,      (* --index-checks *)
+  NoIndexChecks,    (* --no-index-checks *)
+  RangeChecks,      (* --range-checks *)
+  NoRangeChecks,    (* --no-range-checks *)
+
   (* product options *)
-  
-  Elf,           (* --elf *)
-  MachO,         (* --mach-o *)
-  KeepAsm,       (* --keep-asm *)
-  PurgeAsm,      (* --purge-asm *)
-  Build,         (* --build *)
-  NoBuild,       (* --no-build *)
-  Static,        (* --static *)
-  NoStatic,      (* --no-static *)
-  
+
+  Elf,              (* --elf *)
+  MachO,            (* --mach-o *)
+  KeepAsm,          (* --keep-asm *)
+  PurgeAsm,         (* --purge-asm *)
+  Build,            (* --build *)
+  NoBuild,          (* --no-build *)
+  Static,           (* --static *)
+  NoStatic,         (* --no-static *)
+
   (* source file name *)
-  
+
   SourceFile,
-  
+
   (* diagnostic options *)
-  
-  Debug,         (* --debug *)
-  NoDebug,       (* --no-debug *)
-  Verbose,       (* --verbose *)
-  ShowSettings,  (* --show-settings *)
-  
+
+  Debug,            (* --debug *)
+  NoDebug,          (* --no-debug *)
+  Verbose,          (* --verbose *)
+  ShowSettings,     (* --show-settings *)
+
   (* path options *)
-  
+
   LibPath,       (* --lib-path *)
   WorkDir,       (* --work-dir *)
-  
+
   (* end of input sentinel *)
-  
+
   EndOfInput );
-  
+
 
 (* ------------------------------------------------------------------------
  * Length of longest argument string
  * ------------------------------------------------------------------------ *)
 
-CONST MaxArgStrLen = 17;
+CONST MaxArgStrLen = 20;
 
-  
+
 (* ------------------------------------------------------------------------
  * function MockaArgLexer.nextToken()
  * ------------------------------------------------------------------------
@@ -113,6 +120,69 @@ PROCEDURE GetLastArg ( VAR lastArg : ARRAY OF CHAR );
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE GetArgStrForToken ( VAR argStr : ARRAY OF CHAR; token : Token );
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isInfoRequest(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents an information request.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isInfoRequest ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isCompilationRequest(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a compilation request.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isCompilationRequest ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isSyntaxOption(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a syntax option.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isSyntaxOption ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isSafetyOption(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a safety option.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isSafetyOption ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isProductOption(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a product option.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isProductOption ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isDiagOption(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a diagnostic option.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isDiagOption ( token : Token ) : BOOLEAN;
+
+
+(* ------------------------------------------------------------------------
+ * function MockaArgLexer.isPathOption(token)
+ * ------------------------------------------------------------------------
+ * Returns TRUE if 'token' represents a path option.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE isPathOption ( token : Token ) : BOOLEAN;
 
 
 END MockaArgLexer.
