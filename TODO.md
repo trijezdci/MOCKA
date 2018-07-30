@@ -67,3 +67,9 @@ Differences between ELF and Mach-O:
 
 To Do: find the location in Emit.mod where labels and procedure labels are written,
 add a flag for Mach-O versus Elf, emit labels according to the value of said flag.
+
+### Long Term
+
+* Build and test on FreeBSD.
+* Explore the possibility of PIM4 support.
+* Explore the possibility of a Windows port.
