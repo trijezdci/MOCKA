@@ -87,6 +87,16 @@ PROCEDURE EmitChar ( ch : CHAR );
 
 
 (* ------------------------------------------------------------------------
+ * Public procedure EmitCharNTimes(ch, n)
+ * ------------------------------------------------------------------------
+ * Writes character 'ch' 'n' times to output buffer, where n <= 128.
+ * Interprets ASCII TAB.  Ignores all other control characters.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitCharNTimes ( ch : CHAR; n : CARDINAL );
+
+
+(* ------------------------------------------------------------------------
  * Procedure CodeGen.EmitString(s)
  * ------------------------------------------------------------------------
  * Writes string 's' to output buffer.
@@ -120,7 +130,7 @@ PROCEDURE EmitInt ( i : INTEGER );
  * Returns the line number of the current output position.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE line : CARDINAL;
+PROCEDURE line () : CARDINAL;
 
 
 (* ------------------------------------------------------------------------
@@ -129,7 +139,7 @@ PROCEDURE line : CARDINAL;
  * Returns the column number of the current output position.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE column : CARDINAL;
+PROCEDURE column () : CARDINAL;
 
 
 (* ------------------------------------------------------------------------
@@ -138,7 +148,7 @@ PROCEDURE column : CARDINAL;
  * Returns the status of the last operation.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE lastStatus : Status;
+PROCEDURE lastStatus () : Status;
 
 
 (* ------------------------------------------------------------------------

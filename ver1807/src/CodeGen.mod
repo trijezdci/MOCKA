@@ -232,7 +232,8 @@ BEGIN
 
   (* interpret ASCII TAB *)
   IF ch = TAB THEN
-    EmitTab
+    EmitTab;
+    RETURN
   END; (* IF *)
 
   (* ignore any other control characters *)
@@ -254,6 +255,65 @@ BEGIN
 
   status := Success
 END EmitChar;
+
+
+(* ------------------------------------------------------------------------
+ * Public procedure EmitCharNTimes(ch, n)
+ * ------------------------------------------------------------------------
+ * Writes character 'ch' 'n' times to output buffer, where n <= 128.
+ * Interprets ASCII TAB.  Ignores all other control characters.
+ * ------------------------------------------------------------------------ *)
+
+CONST MaxCharRepeat = 128;
+
+PROCEDURE EmitCharNTimes ( ch : CHAR; n : CARDINAL );
+
+VAR
+  i, m : CARDINAL;
+
+BEGIN
+  IF file = NIL THEN
+    status := FileNotOpen;
+    RETURN
+  END; (* IF *)
+
+  (* limit repeat count *)
+  IF n > MaxCharRepeat THEN
+    m := MaxCharRepeat
+  ELSE
+    m := n
+  END; (* IF *)
+
+  (* interpret ASCII TAB *)
+  IF ch = TAB THEN
+    FOR i := 1 TO m DO
+      EmitTab
+    END; (* FOR *)
+    RETURN
+  END; (* IF *)
+
+  (* ignore any other control characters *)
+  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+    status := CtrlCharsIgnored;
+    RETURN
+  END; (* IF *)
+
+  (* write printable character *)
+  FOR i := 1 TO m DO
+    buffer[bufIndex] := ch;
+    INC(columnCounter);
+
+    (* flush buffer if near end of buffer *)
+    IF bufIndex > HighWaterMark THEN
+      Flush
+    ELSE
+      INC(bufIndex)
+    END (* IF *)
+  END; (* FOR *)
+
+  status := Success
+END EmitCharNTimes;
+
 
 
 (* ------------------------------------------------------------------------
