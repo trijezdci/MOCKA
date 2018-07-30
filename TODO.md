@@ -35,12 +35,6 @@ Status July 2018
 
 `--purge-asm`  purge .s files after compilation
 
-`--verbose`  print more details during compilation (obsoletes -blip)
-
-`--debug` add debugging information (default)
-
-`--no-debug` strip debugging information
-
 `--build` compile and link (default)
 
 `--no-build` compile only
@@ -49,7 +43,11 @@ Status July 2018
 
 `--no-static` dynamic linking
 
-`--verbose` verbose output
+`--debug` add debugging information (default)
+
+`--no-debug` strip debugging information
+
+`--verbose`  print more details during compilation (obsoletes -blip)
 
 `--show-settings` show compiler settings
 
