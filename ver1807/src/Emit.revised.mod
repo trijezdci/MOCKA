@@ -633,6 +633,20 @@ END DeclareModule;
 
 
 (* ------------------------------------------------------------------------
+ * Number of significant chars of module qualifier and procedure identifier
+ * ------------------------------------------------------------------------ *)
+
+CONST SignificantChars = 39;
+
+
+ (* ------------------------------------------------------------------------
+ * Maximum permitted length for procedure labels
+ * ------------------------------------------------------------------------ *)
+
+CONST MaxProcLabelLength = (SignificantChars + 1) * 2;
+
+
+(* ------------------------------------------------------------------------
  * Procedure EmitProcDecl
  *  (extern, isFunction, procMode, procName, num, module, lvl, parent, ref)
  * ------------------------------------------------------------------------
@@ -652,9 +666,6 @@ PROCEDURE EmitProcDecl
     VAR ref          : CgBase.ProcIndex);
 
 (* Replacement for DeclareProcedure *)
-
-CONST
-  MaxLen = 80;
 
 VAR
   prefix : CHAR;
@@ -704,21 +715,21 @@ BEGIN
     (* ident *)
     ident := procName;
 
-    (* label length *)
+    (* check label length *)
     len := len + StringLength(qualifier^) + StringLength(ident^) + 1;
-
-    (* permitted length *)
-    IF len <= MaxLen THEN
+    IF (* permitted length *) len <= MaxProcLabelLength THEN
       ComposeProcLabel(label, prefix, qualifier^, ident^)
 
     ELSE (* excess length *)
-      (* use module name and proc name ... *)
+      (* use module name and procedure name as label *)
       ComposeProcLabel(label, prefix, module^.Name^, ident^);
-      (* ... and append procedure index number to avoid name collision *)
+
+      (* append procedure index *)
       ConvertLONGINTtoString(procNumber, procNumStr);
-      (* use double lowline separator, it cannot occur in M2 identifiers *)
-      StringAppend2(label, "__", procNumStr)
-    END (* IF *)
+
+      (* use dot as separator to prevent name collision *)
+      StringAppend2(label, ".", procNumStr)
+    END; (* IF *)
 
   ELSE (* foreign procedure *)
 
