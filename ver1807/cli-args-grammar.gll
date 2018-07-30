@@ -11,7 +11,7 @@
  *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
  *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
  *                                                                          *
- * File 'cli-args.g' Copyright (C) 2018, Benjamin Kowarsch                  *
+ * File 'cli-args-grammar.gll' Copyright (C) 2018, Benjamin Kowarsch        *
  * ------------------------------------------------------------------------ */
 
 grammar mockaArgs;
@@ -26,100 +26,118 @@ grammar mockaArgs;
 args :
   infoRequest | compilationRequest ( diagOption | pathOption )*
   ;
-  
+
 infoRequest :
   "--help" | "--version" | "--copyright"
   ;
-  
+
 compilationRequest :
-  ( safetyOption | productOption )* sourceFile
+  ( syntaxOption | safetyOption | productOption )* sourceFile
   ;
-  
+
+syntaxOption :
+  "--octal-literals" | "--no-octal-literals" |
+  "--synonym-symbols" | "--no-synonym-symbols"
+  ;
+
 safetyOption :
   "--index-checks" | "--no-index-checks" |
   "--range-checks" | "--no-range-checks"
   ;
-  
+
 productOption :
   "--elf" | "--mach-o" | "--keep-asm" | "--purge-asm" |
   "--build" | "--no-build" | "--static" | "--no-static"
   ;
-  
+
 sourceFile :
   ( relativePath | absolutePath | homeDirPath )? filename
   ;
-  
+
 filename :
   ModuleIdent ( DefSuffix | ModSuffix )?
   ;
-  
+
 diagOption :
   "--debug" | "--no-debug" | "--show-settings" | "--verbose"
   ;
-  
+
 pathOption :
   libPath+ workDirPath? | workDirPath libPath*
   ;
-  
+
 libPath :
   "--lib-path" path
   ;
-  
+
 workDirPath :
   "--workDir" path
   ;
-  
+
 path :
   RelativePath | AbsolutePath | HomeDirPath
   ;
-  
-  
+
+
 /* ------------------------------------------------------------------------
  * Terminals
  * ------------------------------------------------------------------------ */
 
+/* Synonyms
+ * -h = --help
+ * -I = --index-checks,  -i = --no-index-checks
+ * -R = --range-checks,  -r = --no-range-checks
+ * -A = --keep-asm,      -a = --purge-asm
+ * -B = --build,         -b = --no-build
+ * -S = --static,        -s = --no-static
+ * -D = --debug,         -d = --no-debug
+ * -v = --verbose
+ * -L = --lib-path
+ * -W = --work-dir
+ */
+
 ModuleIdent :
   Letter ( Letter | Digit )
   ;
-  
+
 .Letter :
   "A" .. "Z" | "a" .. "z"
   ;
-  
+
 .Digit :
   "0" .. "9"
   ;
-  
+
 DefSuffix :
   ".def"
   ;
-  
+
 ModSuffix :
   ".mod"
   ;
-  
+
 RelativePath :
   "." PathTail
   ;
-    
+
 AbsolutePath :
   "/" ( DirName PathTail? )?
   ;
-  
+
 HomeDirPath :
   "~" PathTail
   ;
-  
+
 .PathTail :
   ( "/" DirName )+
   ;
-  
+
 .DirName :
   DirNameComponent ( "." DirNameComponent )*
   ;
-  
+
 .DirNameComponent :
   ( Letter | Digit | "_" ) ( Letter | Digit | "_" | "+" | "-" )*
   ;
-  
+
 endg mockaArgs.
