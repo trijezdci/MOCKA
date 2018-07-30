@@ -53,7 +53,7 @@ Status July 2018
 
 `--lib-path`, `-L` set library search path
 
-`--working-dir`, `-W` set working directory (for output)
+`--work-dir`, `-W` set working directory (for output)
 
 ### Mach-O Support
 
