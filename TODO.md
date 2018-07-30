@@ -19,6 +19,14 @@ Status July 2018
 
 ### Command Line Options
 
+`--index-checks` add code to check array bounds (default)
+
+`--no-index-checks` do not add code to check array bounds
+
+`--range-checks` add code for numeric type range checking (default)
+
+`--no-range-checks` do not add code for numeric type range checking
+
 `--elf`     for ELF object file output (default)
 
 `--mach-o`  for Mach-O object file output
@@ -29,17 +37,21 @@ Status July 2018
 
 `--verbose`  print more details during compilation (obsoletes -blip)
 
-`--index-checks` add code to check array bounds (default)
-
-`--no-index-checks` do not add code to check array bounds
-
-`--range-checks` add code for numeric type range checking (default)
-
-`--no-range-checks` do not add code for numeric type range checking
-
 `--debug` add debugging information (default)
 
 `--no-debug` strip debugging information
+
+`--build` compile and link (default)
+
+`--no-build` compile only
+
+`--static` static linking (default)
+
+`--no-static` dynamic linking
+
+`--verbose` verbose output
+
+`--show-settings` show compiler settings
 
 `--lib-path` set library search path
 
