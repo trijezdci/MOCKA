@@ -149,7 +149,7 @@ Comment :
   "/*" ( PrintableChar | Tab | Newline )* "*/"
   ;
 
-Printable :
+PrintableChar :
   ASCII(32) .. ASCII(126)
   ;
 
