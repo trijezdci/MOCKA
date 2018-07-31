@@ -132,11 +132,11 @@ HomeDirPath :
   ( Letter | Digit | "_" ) ( Letter | Digit | "_" | "+" | "-" )*
   ;
 
-Letter :
+.Letter :
   "A" .. "Z" | "a" .. "z"
   ;
 
-Digit :
+.Digit :
   "0" .. "9"
   ;
 
@@ -149,19 +149,19 @@ Comment :
   "/*" ( PrintableChar | Tab | Newline )* "*/"
   ;
 
-PrintableChar :
+.PrintableChar :
   ASCII(32) .. ASCII(126)
   ;
 
-Tab : ASCII(9) ;
+.Tab : ASCII(9) ;
 
-Newline :
+.Newline :
   LF | CR LF?
   ;
 
-LF : ASCII(10) ;
+.LF : ASCII(10) ;
 
-CR : ASCII(13) ;
+.CR : ASCII(13) ;
 
 
-endg mockaArgs.
+endg mockaConf.
