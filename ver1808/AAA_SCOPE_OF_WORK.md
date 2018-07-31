@@ -5,7 +5,7 @@
 * build and test with build parameters in place
 
 ### Stage 2
-* integrate MockaOptions, remove old option management
+* integrate [MockaOptions](src/MockaOptions.def), remove old option management
 * build and test with new option management in place
 
 ### Stage 3
