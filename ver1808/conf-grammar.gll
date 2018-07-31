@@ -32,7 +32,7 @@ keyValueList :
   ;
 
 tabSpec :
-  "tab-width" "=" number
+  "tab-width" "=" Number
   ;
 
 newlineSpec :
