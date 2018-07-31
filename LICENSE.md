@@ -19,4 +19,6 @@ MOCKA's runtime and Modula-2 standard library were licensed under the GPL or the
 
 In order to comply strictly with the GPL/LGPL license terms, the LICENSE file should be made part of this
 repository and any distribution packages. To be able to do so, we have written to the director of
-intellectual property affairs at Fraunhofer Society for clarification and confirmation.
+intellectual property affairs at Fraunhofer Society[1] for clarification and confirmation.
+
+[1] [Fraunhofer Society](https://www.fraunhofer.de/en.html) now holds the copyrights to MOCKA.
