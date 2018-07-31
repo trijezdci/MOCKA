@@ -9,7 +9,7 @@
 * build and test with new option management in place
 
 ### Stage 3
-* integrate CodeGen, Newline, Tabulator
+* integrate [CodeGen](src/CodeGen.def), Newline, Tabulator
 * replace Emit with revised version
 * build and test with new CodeGen and Emit
 
