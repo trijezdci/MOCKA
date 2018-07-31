@@ -27,6 +27,6 @@ For version change log, see file CHANGES
 * clean-up release 1807 by B.Kowarsch in July 2018, based on 1208
 * revised release 1808 by B.Kowarsch in August 2018, **work in progress**
 
-For scope of work for version 1808, see file AAA_SCOPE_OF_WORK
+For scope of work for version 1808, see file [./ver1808/AAA_SCOPE_OF_WORK.md](https://github.com/trijezdci/MOCKA/blob/master/ver1808/AAA_SCOPE_OF_WORK.md)
 
 \[END OF FILE\]
