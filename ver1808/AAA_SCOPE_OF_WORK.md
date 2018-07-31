@@ -1,7 +1,7 @@
 # Scope of Work for Version 1808
 
 ### Stage 1
-* integrate MockaBuildParams
+* integrate [MockaBuildParams](src/MockaBuildParams.def)
 * build and test with build parameters in place
 
 ### Stage 2
