@@ -17,7 +17,7 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 * FOREIGN DEFINITION MODULE for interfacing to C
 
 ### Current Release
-* **Version 1807**, updated July 2018
+* [Version 1807](https://github.com/trijezdci/MOCKA/blob/master/ver1807), updated July 2018
 
 For **version change log**, see [CHANGES](https://github.com/trijezdci/MOCKA/blob/master/ver1807/CHANGES.md) in subdirectory ver1807.
 
