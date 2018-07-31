@@ -25,4 +25,5 @@ intellectual property affairs at Fraunhofer Society[1] for clarification and con
 
 ___
 [1] Former [German National Research Centre for Computer Science](https://www.gmd.de/)
+
 [2] [Fraunhofer Society](https://www.fraunhofer.de/en.html) now holds the copyrights to MOCKA.
