@@ -22,14 +22,14 @@ IMPLEMENTATION MODULE CodeGen;
 (* Target Independent Part of Assembly Output Emitter *)
 
 
-IMPORT SYSTEM, BasicIO, Newline, Tabulator, MockaOptions;
+IMPORT SYSTEM, BasicIO, Newline, Tabulator, MockaBuildParams, MockaOptions;
 
 
 (* ------------------------------------------------------------------------
  * Buffer size
  * ------------------------------------------------------------------------ *)
 
-CONST BufSize = 32*1024;
+CONST BufSize = MockaBuildParams.EmitBufferSize;
 
 
 (* ------------------------------------------------------------------------
@@ -48,6 +48,8 @@ CONST
   TAB = CHR(9);
   CR = CHR(13);
   LF = CHR(10);
+  DEL = CHR(127);
+  SPACE = CHR(32);
 
 
 (* ------------------------------------------------------------------------
@@ -181,7 +183,7 @@ BEGIN
   ELSE (* tab width > 0 *)
     (* replace with whitespace *)
     REPEAT
-      EmitChar(" ")
+      EmitChar(SPACE)
     UNTIL (columnCounter MOD tabWidth) = 0
   END; (* IF *)
 
@@ -201,7 +203,7 @@ PROCEDURE EmitCtrl ( ch : CHAR );
 
 BEGIN
   (* ignore non-control character input *)
-  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+  IF (ch < SPACE) OR (ch = DEL) THEN
     (* write control code *)
     buffer[bufIndex] := ch;
 
@@ -237,7 +239,7 @@ BEGIN
   END; (* IF *)
 
   (* ignore any other control characters *)
-  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+  IF (ch < SPACE) OR (ch = DEL) THEN
     status := CtrlCharsIgnored;
     RETURN
   END; (* IF *)
@@ -295,7 +297,7 @@ BEGIN
   END; (* IF *)
 
   (* ignore any other control characters *)
-  IF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+  IF (ch < SPACE) OR (ch = DEL) THEN
     status := CtrlCharsIgnored;
     RETURN
   END; (* IF *)
@@ -353,7 +355,7 @@ BEGIN
       EmitTab
 
     (* ignore any other control characters *)
-    ELSIF (ORD(ch) < 32) OR (ORD(ch) = 127) THEN
+    ELSIF (ch < SPACE) OR (ch = DEL) THEN
       ctrlCharsIgnored := TRUE
 
     (* write printable characters *)
