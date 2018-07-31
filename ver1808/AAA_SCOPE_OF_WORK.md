@@ -2,20 +2,21 @@
 
 ### Stage 1
 * integrate MockaBuildParams
-* Build and test with build parameters in place
+* build and test with build parameters in place
 
 ### Stage 2
 * integrate MockaOptions, remove old option management
-* Build and test with new option management in place
+* build and test with new option management in place
 
 ### Stage 3
 * integrate CodeGen, Newline, Tabulator
-* Replace Emit with revised version
-* Build and test with new CodeGen and Emit
+* replace Emit with revised version
+* build and test with new CodeGen and Emit
 
 ### Stage 4
 * integrate MockaArgReader, MockaArgLexer, MockaArgParser
-* Build and test with new command line interface
+* build and test with new command line interface
+* write bash script to mimic the old options
 
 ### Stage 5
 * rewrite README
@@ -29,4 +30,4 @@
 * provide package download
 * Announce availability
 
-[END OF FILE]
+\[END OF FILE\]
