@@ -166,70 +166,82 @@ IMPORT CodeGen, CodeGenX86;
 
 
 
-TYPE	RoundMode	 = (RndNearest, RndZero, RndInf, RndNegInf, RndUnknown);
+TYPE RoundMode = ( RndNearest, RndZero, RndInf, RndNegInf, RndUnknown );
 
-CONST	MaxDisplay	 = 15;		(* Max. nesting Level of procedures *)
-	MaxFloatTempo	 = 64;		(* Max. size of Float-Stack	    *)
-	MaxPowerTable	 = 31;
-	NoTempo		 = 1111111111;
-	EmitAnnotations	 = FALSE;	(* Annotations on/off *)
+
+CONST
+  MaxDisplay = 15; (* Max. nesting Level of procedures *)
+  MaxFloatTempo = 64; (* Max. size of Float-Stack *)
+  MaxPowerTable	 = 31;
+  NoTempo = 1111111111;
+  EmitAnnotations = FALSE; (* Annotations on/off *)
+
 
 VAR
-    RelationTable    : ARRAY CgBase.Relation OF
-			 ARRAY [FALSE..TRUE] OF ARRAY [0..2] OF CHAR;
-			   (* maps Relation into e,ne,g,ge,l,le,a,ae,b,be  *)
+  RelationTable :
+    ARRAY CgBase.Relation OF ARRAY [FALSE..TRUE] OF ARRAY [0..2] OF CHAR;
+  (* maps Relation to e, ne, g, ge, l, le, a, ae, b, be  *)
 
-    Reverse	     : ARRAY CgBase.Relation OF CgBase.Relation;
-			   (* maps Relation into reverse Relation	   *)
+  Reverse : ARRAY CgBase.Relation OF CgBase.Relation;
+  (* maps Relation to reverse Relation *)
 
-    PowerTable       : ARRAY [0 .. MaxPowerTable] OF LONGINT;
-                           (* powers of two, 1 <= 2^n <= 2^MaxPowerTable   *)
+  PowerTable : ARRAY [0 .. MaxPowerTable] OF LONGINT;
+  (* powers of two, 1 <= 2^n <= 2^MaxPowerTable   *)
 
-    WordReg, ByteReg : ARRAY Register OF ARRAY [0..4] OF CHAR;
-			   (* maps to register parts                       *)
+  WordReg, ByteReg : ARRAY Register OF ARRAY [0..4] OF CHAR;
+  (* maps to register fractions *)
 
-    SaveDisplay	     : ARRAY [0 .. MaxDisplay] OF BOOLEAN;
-                           (* SaveDisplay [i] = TRUE <==> save display of  *)
-                           (* current procedure level                      *)
+  SaveDisplay : ARRAY [0 .. MaxDisplay] OF BOOLEAN;
+  (* SaveDisplay[i] = TRUE <=> save display of current procedure level *)
 
-    FStackTempo	     : ARRAY [0 .. MaxFloatTempo-1] OF CgBase.Tempo;
-			   (* temporaries if FloatingPoint-Stack overflows *)
+  FStackTempo : ARRAY [0 .. MaxFloatTempo-1] OF CgBase.Tempo;
+  (* temporaries if FloatingPoint-Stack overflows *)
 
-    TransferTempo    : CgBase.Tempo;
-			   (* temporary for reg <-> freg transfers *)
+  TransferTempo : CgBase.Tempo;
+  (* temporary for reg <-> freg transfers *)
 
-    oEmitIR, oEmitMatch, oRegAlloc, oAssemblerListing, oCCall : CARDINAL;
+  oEmitIR, oEmitMatch, oRegAlloc, oAssemblerListing, oCCall : CARDINAL;
 
-    AsmListFileName	: FileName;
-    ModName		: ARRAY [0..80] OF CHAR;
+  AsmListFileName : FileName;
+  ModName : ARRAY [0..80] OF CHAR;
 
-    CurFrameSize	: LONGINT;
-    CurRoundMode	: RoundMode;
+  CurFrameSize : LONGINT;
+  CurRoundMode : RoundMode;
 
-    CurFStackSize	: INTEGER;
-    FStackStart		: INTEGER;
+  CurFStackSize : INTEGER;
+  FStackStart : INTEGER;
 
-    ProcLabel		: CgBase.Label;
+  ProcLabel : CgBase.Label;
+
 
 (* local Variables for Emit-Routines *)
+
+(* THIS IS ABSOLUTELY HORRIBLE SHIT !!!
+
+   What kind of idiot came up with this idea ???
+
+   And nobody at GMD/KIT flagged this during code review ???
+
+   Perhaps some people should consider returning their PhDs *)
+
 VAR
-	lab, lab2	: CgBase.Label;
-	i,j             : LONGINT;
-	k		: SHORTCARD;
-	str, cmd        : ARRAY [0..255] OF CHAR;
-	ok		: BOOLEAN;
-	tr1		: RECORD
-			    CASE : BOOLEAN OF
-			    | TRUE : r : REAL;
-			    | FALSE : c : LONGINT;
-			    END;
-			  END;
-	tr2		: RECORD
-			    CASE : BOOLEAN OF
-			    | TRUE : r : LONGREAL;
-			    | FALSE : c2, c1 : LONGINT;
-			    END;
-			  END;
+  lab, lab2 : CgBase.Label;
+  i,j : LONGINT;
+  k : SHORTCARD;
+  str, cmd : ARRAY [0..255] OF CHAR;
+  ok : BOOLEAN;
+  tr1 : RECORD
+    CASE : BOOLEAN OF
+    | TRUE : r : REAL;
+    | FALSE : c : LONGINT
+    END (* CASE *)
+  END; (* RECORD *)
+  tr2 : RECORD
+    CASE : BOOLEAN OF
+    | TRUE : r : LONGREAL;
+    | FALSE : c2, c1 : LONGINT
+    END (* CASE *)
+  END; (* RECORD *)
 
 
 (* ------------------------------------------------------------------------
@@ -287,63 +299,84 @@ END LR;
 
 
 (* ------------------------------------------------------------------------
- * Procedure Spill  --  needs clean up
+ * Procedure Spill
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE Spill ( reg : Register; loc : Spilllocation );
+
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
- CodeGen.EmitString('	pushl	');  EmitRegister(reg);  CodeGen.EmitLn;
-	IF EmitAnnotations THEN
- CodeGen.EmitString('					/* Spill */');  CodeGen.EmitLn;
-	END;
+    CodeGen.EmitString('	pushl	');
+    EmitRegister(reg);
+    CodeGen.EmitLn;
+    IF EmitAnnotations THEN
+      CodeGen.EmitString('					/* Spill */');
+      CodeGen.EmitLn
+    END (* IF *)
   ELSE
-	IF EmitAnnotations THEN
- CodeGen.EmitString(' 					/* Spill ');  EmitRegister(reg);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
-	END;
-  END;
+    IF EmitAnnotations THEN
+      CodeGen.EmitString(' 					/* Spill ');
+      EmitRegister(reg);
+      CodeGen.EmitString(' */');
+      CodeGen.EmitLn
+    END (* IF *)
+  END (* IF *)
 END Spill;
 
 
 (* ------------------------------------------------------------------------
- * Procedure Restore  --  needs clean up
+ * Procedure Restore
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE Restore (reg : Register; loc : Spilllocation);
+PROCEDURE Restore ( reg : Register; loc : Spilllocation );
+
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
- CodeGen.EmitString('	popl	');  EmitRegister(reg);  CodeGen.EmitLn;
-	IF EmitAnnotations THEN
- CodeGen.EmitString('					/* Restore */');  CodeGen.EmitLn;
-	END;
+    CodeGen.EmitString('	popl	');
+    EmitRegister(reg);
+    CodeGen.EmitLn;
+    IF EmitAnnotations THEN
+      CodeGen.EmitString('					/* Restore */');
+      CodeGen.EmitLn
+    END (* IF *)
   ELSE
-	IF EmitAnnotations THEN
- CodeGen.EmitString(' 					/* Restore ');  EmitRegister(reg);  CodeGen.EmitString(' */');  CodeGen.EmitLn;
-	END;
-  END;
+    IF EmitAnnotations THEN
+      CodeGen.EmitString(' 					/* Restore ');
+      EmitRegister(reg);
+      CodeGen.EmitString(' */');
+      CodeGen.EmitLn
+    END (* IF *)
+  END (* IF *)
 END Restore;
 
 
 (* ------------------------------------------------------------------------
- * Procedure SpillFstack  --  needs clean up
+ * Procedure SpillFstack
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE SpillFStack;
-  VAR i : INTEGER;
+
+VAR
+  i : INTEGER;
+
 BEGIN
-  FOR i:=0 TO CurFStackSize - 1 DO
-    DeclareTempo (FloatLong, FStackTempo[FStackStart + i]);
- CodeGen.EmitString('	fstpl	');  CodeGen.EmitInt( FStackTempo[FStackStart + i]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
+  FOR i := 0 TO CurFStackSize-1 DO
+    DeclareTempo(FloatLong, FStackTempo[FStackStart + i]);
+    CodeGen.EmitString('	fstpl	');
+    CodeGen.EmitInt( FStackTempo[FStackStart+i]);
+    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitLn;
     IF EmitAnnotations THEN
- CodeGen.EmitString('					/* SpillFstack */');  CodeGen.EmitLn;
-    END;
-  END;
-  CurFStackSize := 0;
+      CodeGen.EmitString('					/* SpillFstack */');
+      CodeGen.EmitLn
+    END (* IF *)
+  END; (* FOR *)
+  CurFStackSize := 0
 END SpillFStack;
 
 
 (* ------------------------------------------------------------------------
- * Procedure PushFStack  --  needs clean up
+ * Procedure PushFStack
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE PushFStack;
@@ -352,121 +385,158 @@ PROCEDURE PushFStack;
 BEGIN
   IF CurFStackSize = 8 THEN
     (* tiefstes Stackelement als Tempo in den Speicher legen *)
-    DeclareTempo (FloatLong, FStackTempo[FStackStart + 7]);
- CodeGen.EmitString('	fxch	%st(7)');  CodeGen.EmitLn;
- CodeGen.EmitString('	fstl	');  CodeGen.EmitInt( FStackTempo[FStackStart + 7]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
- CodeGen.EmitString('	fxch	%st(7)');  CodeGen.EmitLn;
- CodeGen.EmitString('	ffree	%st(7)');  CodeGen.EmitLn;
+    DeclareTempo(FloatLong, FStackTempo[FStackStart + 7]);
+    CodeGen.EmitString('	fxch	%st(7)');
+    CodeGen.EmitLn;
+
+    CodeGen.EmitString('	fstl	');
+    CodeGen.EmitInt(FStackTempo[FStackStart+7]);
+    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitLn;
+
+    CodeGen.EmitString('	fxch	%st(7)');
+    CodeGen.EmitLn;
+
+    CodeGen.EmitString('	ffree	%st(7)');
+    CodeGen.EmitLn
   ELSE
-    INC (CurFStackSize);
-  END;
-  DEC (FStackStart);
-  FStackTempo[FStackStart] := NoTempo;
+    INC (CurFStackSize)
+  END; (* IF *)
+  DEC(FStackStart);
+  FStackTempo[FStackStart] := NoTempo
 END PushFStack;
 
 
 (* ------------------------------------------------------------------------
- * Procedure PopFStack  --  needs clean up
+ * Procedure PopFStack
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE PopFStack;
 (* wird nach jedem pop auf den 387 Stack aufgerufen *)
+
 BEGIN
-  INC (FStackStart);
-  DEC (CurFStackSize);
+  INC(FStackStart);
+  DEC(CurFStackSize)
 END PopFStack;
 
 
 (* ------------------------------------------------------------------------
- * Procedure FloatOperation  --  needs clean up
+ * Procedure FloatOperation
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE FloatOperation (VAR op: ARRAY OF CHAR);
+PROCEDURE FloatOperation ( VAR op : ARRAY OF CHAR );
+
 BEGIN
   INC (FStackStart);
   IF FStackTempo[FStackStart] # NoTempo THEN
- CodeGen.EmitTab;  CodeGen.EmitString(op);  CodeGen.EmitString('l	');  CodeGen.EmitInt( FStackTempo[FStackStart]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
-    FStackTempo[FStackStart] := NoTempo;
+    CodeGen.EmitTab;
+    CodeGen.EmitString(op);
+    CodeGen.EmitString('l	');
+    CodeGen.EmitInt( FStackTempo[FStackStart]);
+    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitLn;
+
+    FStackTempo[FStackStart] := NoTempo
   ELSE
- CodeGen.EmitTab;  CodeGen.EmitString( op);  CodeGen.EmitString('p	%st,%st(1)');  CodeGen.EmitLn;
-    DEC (CurFStackSize);
-  END;
+    CodeGen.EmitTab;
+    CodeGen.EmitString(op);
+    CodeGen.EmitString('p	%st,%st(1)');
+    CodeGen.EmitLn;
+
+    DEC(CurFStackSize)
+  END (* IF *)
 END FloatOperation;
 
 
 (* ------------------------------------------------------------------------
- * Procedure CheckRoundMode  --  needs clean up
+ * Procedure CheckRoundMode
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE CheckRoundMode (newmode: RoundMode);
+PROCEDURE CheckRoundMode ( newmode : RoundMode );
 BEGIN
-  IF CurRoundMode <> newmode THEN
+  IF CurRoundMode # newmode THEN
     CASE newmode OF
-    | RndNearest:
- CodeGen.EmitString('	fldcw	fpucw_round_to_nearest');  CodeGen.EmitLn;
-    | RndZero:
- CodeGen.EmitString('	fldcw	fpucw_round_to_zero');  CodeGen.EmitLn;
-    | RndInf:
- CodeGen.EmitString('	fldcw	fpucw_round_to_inf');  CodeGen.EmitLn;
-    | RndNegInf:
- CodeGen.EmitString('	fldcw	fpucw_round_to_neginf');  CodeGen.EmitLn;
+    | RndNearest :
+      CodeGen.EmitString('	fldcw	fpucw_round_to_nearest');
+      CodeGen.EmitLn
+
+    | RndZero :
+      CodeGen.EmitString('	fldcw	fpucw_round_to_zero');
+      CodeGen.EmitLn
+
+    | RndInf :
+      CodeGen.EmitString('	fldcw	fpucw_round_to_inf');
+      CodeGen.EmitLn
+
+    | RndNegInf :
+      CodeGen.EmitString('	fldcw	fpucw_round_to_neginf');
+      CodeGen.EmitLn
+
     ELSE
-      CompilerError ("Unknown Round Mode");
-    END;
-    CurRoundMode := newmode;
-  END;
+      CompilerError("Unknown Round Mode")
+    END; (* IF *)
+
+    CurRoundMode := newmode
+  END (* CASE *)
 END CheckRoundMode;
 
 
 (* ------------------------------------------------------------------------
- * Procedure CheckRoundMode2  --  needs clean up
+ * Procedure CheckRoundMode2
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE CheckRoundMode2 (newmode1, newmode2: RoundMode);
+PROCEDURE CheckRoundMode2 ( newmode1, newmode2 : RoundMode );
 BEGIN
-  IF (CurRoundMode <> newmode1) AND (CurRoundMode <> newmode2) THEN
-    CheckRoundMode (newmode1);
-  END;
+  IF (CurRoundMode # newmode1) AND (CurRoundMode # newmode2) THEN
+    CheckRoundMode(newmode1)
+  END (* IF *)
 END CheckRoundMode2;
 
 
 (* ------------------------------------------------------------------------
- * Function IsNilMemAdr  --  needs clean up
+ * Function IsNilMemAdr
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE IsNilMemAdr (a: MemAdr) : BOOLEAN;
+PROCEDURE IsNilMemAdr ( a : MemAdr ) : BOOLEAN;
+
 BEGIN
-  RETURN (a.offset = 0) AND
-	 (a.faktor = 0) AND
-	 (a.base = RegNil) AND
-	 (a.symbol = NullSymb)
+  RETURN
+    (a.offset = 0) AND (a.faktor = 0) AND
+    (a.base = RegNil) AND (a.symbol = NullSymb)
 END IsNilMemAdr;
 
 
 (* ------------------------------------------------------------------------
- * Procedure EmitIndex  --  needs clean up
+ * Procedure EmitIndex
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE EmitIndex (VAR base : MemAdr; index : MemAdr; reg : Register);
+PROCEDURE EmitIndex ( VAR base : MemAdr; index : MemAdr; reg : Register );
+
 BEGIN
-  IF NOT IsNilMemAdr (index)
-   THEN base.index := reg;
- CodeGen.EmitString('	movl	');  EmitMemAdr( index);  CodeGen.EmitChar(',');  EmitRegister(reg);  CodeGen.EmitLn;
-  END (* IF *);
+  IF NOT IsNilMemAdr(index) THEN
+   base.index := reg;
+   CodeGen.EmitString('	movl	');
+   EmitMemAdr(index);
+   CodeGen.EmitChar(',');
+   EmitRegister(reg);
+   CodeGen.EmitLn
+  END (* IF *)
 END EmitIndex;
 
 
 (* ------------------------------------------------------------------------
- * Procedure EmitRegister  --  needs clean up
+ * Procedure EmitRegister
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitRegister ( r : Register );
+
 BEGIN
-   CodeGen.EmitChar('%');
-   IF r # Regst1
-     THEN CodeGen.EmitString(IR.RegNameTable[r]);
-     ELSE CodeGen.EmitString('st(1)');
-   END;
+  CodeGen.EmitChar('%');
+  IF r # Regst1 THEN
+    CodeGen.EmitString(IR.RegNameTable[r])
+  ELSE
+    CodeGen.EmitString('st(1)')
+  END (* IF *)
 END EmitRegister;
 
 
@@ -477,11 +547,18 @@ END EmitRegister;
 PROCEDURE EmitRegister2 ( r : Register; mode : CgBase.Mode );
 BEGIN
   CASE SizeTable[mode] OF
-  | 1: CodeGen.EmitString(ByteReg[r]);
-  | 2: CodeGen.EmitString(WordReg[r]);
-  | 4,8: CodeGen.EmitChar('%'); CodeGen.EmitString(IR.RegNameTable[r]);
-  ELSE CompilerError ('Backend: Unknown Register Size');
-  END;
+  | 1:
+    CodeGen.EmitString(ByteReg[r])
+
+  | 2 :
+    CodeGen.EmitString(WordReg[r])
+
+  | 4, 8: CodeGen.EmitChar('%');
+    CodeGen.EmitString(IR.RegNameTable[r])
+
+  ELSE
+    CompilerError('Backend: Unknown Register Size')
+  END (* CASE *)
 END EmitRegister2;
 
 
@@ -490,6 +567,7 @@ END EmitRegister2;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitWordRegister ( r : Register );
+
 BEGIN
   CodeGen.EmitString(WordReg[r])
 END EmitWordRegister;
@@ -500,6 +578,7 @@ END EmitWordRegister;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitByteRegister ( r : Register );
+
 BEGIN
   CodeGen.EmitString(ByteReg[r])
 END EmitByteRegister;
@@ -510,6 +589,7 @@ END EmitByteRegister;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitPlusInt ( i : LONGINT );
+
 BEGIN
   IF i >= 0 THEN
     CodeGen.EmitString(" + ")
@@ -523,39 +603,42 @@ END EmitPlusInt;
 
 
 (* ------------------------------------------------------------------------
- * Procedure EmitMemAdr  --  needs clean up
+ * Procedure EmitMemAdr
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitMemAdr ( am : MemAdr );
+
 BEGIN
   WITH am DO
-    IF symbol # NullSymb
-      THEN CodeGen.EmitString(symbol^);
-	   IF offset # 0
-	     THEN EmitPlusInt (offset)
-	   END;
-      ELSE IF offset # 0
-	     THEN CodeGen.EmitInt(offset)
-	   END;
-    END;
-    IF (base > RegNil) OR ((index > RegNil) AND (faktor > 0))
-      THEN IF (base = RegNil) AND (faktor = 1)
-	     THEN base := index;
-		  faktor := 0;
-	   END; (* IF *)
-	   CodeGen.EmitChar('(');
-	   IF (base > RegNil)
-	     THEN EmitRegister(base);
-	   END;
-	   IF (index > RegNil) AND (faktor > 0)
-	     THEN CodeGen.EmitChar(',');
-		  EmitRegister (index);
-		  CodeGen.EmitChar(',');
-		  CodeGen.EmitInt(faktor);
-	   END;
-	   CodeGen.EmitChar(')');
-    END;
-  END;
+    IF symbol # NullSymb THEN
+      CodeGen.EmitString(symbol^);
+      IF offset # 0 THEN
+        EmitPlusInt(offset)
+      END (* IF *)
+    ELSE
+      IF offset # 0 THEN
+        CodeGen.EmitInt(offset)
+      END (* IF *)
+    END; (* IF *)
+
+    IF (base > RegNil) OR ((index > RegNil) AND (faktor > 0)) THEN
+      IF (base = RegNil) AND (faktor = 1) THEN
+        base := index;
+        faktor := 0
+      END; (* IF *)
+      CodeGen.EmitChar('(');
+      IF base > RegNil THEN
+        EmitRegister(base)
+      END; (* IF *)
+      IF (index > RegNil) AND (faktor > 0) THEN
+        CodeGen.EmitChar(',');
+        EmitRegister(index);
+        CodeGen.EmitChar(',');
+        CodeGen.EmitInt(faktor)
+      END; (* IF *)
+      CodeGen.EmitChar(')')
+    END (* IF *)
+  END (* WITH *)
 END EmitMemAdr;
 
 
@@ -564,6 +647,7 @@ END EmitMemAdr;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitAdrMode ( am : AdrMode );
+
 BEGIN
   WITH am DO
     CASE kind OF
@@ -580,6 +664,7 @@ END EmitAdrMode;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitSuffix ( s : CgBase.Mode );
+
 BEGIN
   CodeGen.EmitChar(SuffixTable[s])
 END EmitSuffix;
@@ -590,6 +675,7 @@ END EmitSuffix;
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitSigned ( s : CgBase.Mode );
+
 BEGIN
   IF SignedTable[s] THEN
     CodeGen.EmitChar("s")
@@ -951,107 +1037,148 @@ END ComposeProcLabel;
 
 
 (* ------------------------------------------------------------------------
- * Procedure DeclareString  --  needs clean up
+ * Procedure DeclareString
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE DeclareString
    (    length : SHORTCARD;
     VAR string : ARRAY OF CHAR;
     VAR ref    : CgBase.StringIndex);
-  VAR l   : CARDINAL;
-      c   : CHAR;
-      numbersNeedRestart: BOOLEAN;
+
+VAR
+  ch : CHAR;
+  index : CARDINAL;
+  numbersNeedRestart : BOOLEAN;
+
 BEGIN
-   numbersNeedRestart:=FALSE;
-   GetLabel (ref);
- CodeGen.EmitString('	.data');  CodeGen.EmitLn;
- CodeGen.EmitString( ref^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
- CodeGen.EmitString(' 	.ascii	"');
-   FOR l := 0 TO length - 1 DO
-      c := string[l];
-      IF numbersNeedRestart AND ('0'<=c) AND (c<='9') THEN	(* Restart *)
- CodeGen.EmitString('"');  CodeGen.EmitLn;
- CodeGen.EmitString('	.ascii	"');
-      END;
-      IF (' ' <= c) AND (c <= 'z') AND (c # 42C) AND (c # '\') THEN
-	 CodeGen.EmitChar(c);
-         numbersNeedRestart:=FALSE;
-      ELSE
-	 IF l < length - 1 THEN
-	    CodeGen.EmitChar('\');
- CodeGen.EmitInt( ORD (c) DIV 64);  CodeGen.EmitInt( (ORD (c) MOD 64) DIV 8);  CodeGen.EmitInt( ORD (c) MOD 8);
-	 END;
-         numbersNeedRestart:=TRUE;
-      END;
-   END;
-   CodeGen.EmitString('\000"'); CodeGen.EmitLn;
- CodeGen.EmitString('	.text');  CodeGen.EmitLn;
+  numbersNeedRestart:=FALSE;
+  GetLabel (ref);
+
+  CodeGen.EmitTab;
+  CodeGen.EmitString(".data");
+  CodeGen.EmitLn;
+
+  CodeGen.EmitString( ref^);
+  CodeGen.EmitChar(':');
+  CodeGen.EmitLn;
+
+  CodeGen.EmitTab;
+  CodeGen.EmitString(".ascii");
+  CodeGen.EmitTab;
+  CodeGen.Emitchar('"');
+
+  FOR index := 0 TO length - 1 DO
+    ch := string[index];
+    IF numbersNeedRestart AND (ch >= "0") AND (ch <= "9") THEN (* restart *)
+      CodeGen.EmitString('"');
+      CodeGen.EmitLn;
+
+      CodeGen.Tab;
+      CodeGen.EmitString(".ascii");
+      CodeGen.EmitTab;
+      CodeGen.EmitChar('"')
+    END; (* IF *)
+
+    IF (ch >= " ") AND (ch <= "z") AND (ch # '"') AND (ch # "\") THEN
+      CodeGen.EmitChar(ch);
+      numbersNeedRestart := FALSE
+    ELSE
+      IF index < length - 1 THEN
+        CodeGen.EmitChar("\");
+        CodeGen.EmitInt(ORD(ch) DIV 64);
+        CodeGen.EmitInt((ORD(ch) MOD 64) DIV 8);
+        CodeGen.EmitInt(ORD(ch) MOD 8);
+      END; (* IF *)
+      numbersNeedRestart := TRUE
+    END (* IF *)
+  END; (* FOR *)
+
+  CodeGen.EmitString('\000"');
+  CodeGen.EmitLn;
+
+  CodeGen.EmitTab;
+  CodeGen.EmitString(".text");
+  CodeGen.EmitLn
 END DeclareString;
 
 
 (* ------------------------------------------------------------------------
- * Procedure DeclareTempo  --  needs clean up
+ * Procedure DeclareTempo
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE DeclareTempo (mode: CgBase.Mode; VAR tempo: CgBase.Tempo);
+PROCEDURE DeclareTempo ( mode : CgBase.Mode; VAR tempo : CgBase.Tempo );
+
 BEGIN
-  IF mode = FloatLong
-    THEN INC(CurFrameSize, 8);
-    ELSE INC(CurFrameSize, 4);
-  END;
-  tempo := -CurFrameSize;
+  IF mode = FloatLong THEN
+    INC(CurFrameSize, 8)
+  ELSE
+    INC(CurFrameSize, 4)
+  END; (* IF *)
+
+  tempo := -CurFrameSize
 END DeclareTempo;
 
 
 (* ------------------------------------------------------------------------
- * Procedure DeclareTransferTempo  --  needs clean up
+ * Procedure DeclareTransferTempo
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE DeclareTransferTempo;
+
 BEGIN
-  IF TransferTempo = NoTempo
-    THEN DeclareTempo (FloatShort, TransferTempo);
-  END;
+  IF TransferTempo = NoTempo THEN
+    DeclareTempo(FloatShort, TransferTempo);
+  END (* IF *)
 END DeclareTransferTempo;
 
 
 (* ------------------------------------------------------------------------
- * Procedure BeginModule  --  needs clean up
+ * Procedure BeginModule
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE BeginModule
-   (AtModulName  :  ARRAY OF CHAR;
-    AtFrameSize  :  LONGINT);
+   ( AtModulName : ARRAY OF CHAR;
+     AtFrameSize : LONGINT );
+
+VAR
+  index : CARDINAL;
+
 BEGIN
-   CallLevel := 0;
-   CurPos.line := 0;
-   CurPos.col := 0;
+  CallLevel := 0;
+  CurPos.line := 0;
+  CurPos.col := 0;
 
-   DisplaySym := MakeRelSymb ('DISPLAY_');
+  DisplaySym := MakeRelSymb("DISPLAY_");
 
-   FOR i := 0 TO MaxDisplay DO SaveDisplay [i] := FALSE; END;
+  FOR index := 0 TO MaxDisplay DO
+    SaveDisplay[index] := FALSE
+  END; (* FOR *)
 
-   IR.OptEmitIR		:= Enabled (oEmitIR);
-   IR.OptEmitMatch	:= Enabled (oEmitMatch);
-   IR.OptRegAlloc	:= Enabled (oRegAlloc);
+  IR.OptEmitIR := Enabled(oEmitIR);
+  IR.OptEmitMatch := Enabled(oEmitMatch);
+  IR.OptRegAlloc := Enabled(oRegAlloc);
 
-   BuildLibraryFileName (AtModulName,
-			 KindAssemblerSourceFile, AsmListFileName);
-   CodeGen.Open (AsmListFileName);
-   StringAssign (ModName, AtModulName);
+  BuildLibraryFileName(AtModulName, KindAssemblerSourceFile, AsmListFileName);
+  CodeGen.Open(AsmListFileName);
+  StringAssign(ModName, AtModulName);
 
-   InitCgBase;
+  InitCgBase;
 
-   IF AtFrameSize > 0 THEN
-     CodeGen.EmitString('	.comm ');
-     IF NOT Enabled(ElfOption) THEN
-       CodeGen.EmitChar('_')
-     END;
-     CodeGen.EmitString( AtModulName);
-     CodeGen.EmitString('_s, ');
-     CodeGen.EmitInt( 4 * ((ABS(AtFrameSize)+3) DIV 4)); CodeGen.EmitLn;
-   END;
- CodeGen.EmitString('	.text'); CodeGen.EmitLn;
+  IF AtFrameSize > 0 THEN
+    CodeGen.EmitTab;
+    CodeGen.EmitString(".comm ");
+    IF NOT Enabled(ElfOption) THEN
+       CodeGen.EmitChar("_")
+    END; (* IF *)
+    CodeGen.EmitString(AtModulName);
+    CodeGen.EmitString("_s, ");
+    CodeGen.EmitInt(4*((ABS(AtFrameSize)+3) DIV 4));
+    CodeGen.EmitLn
+  END; (* IF *)
+
+  CodeGen.EmitTab;
+  CodeGen.EmitString(".text");
+  CodeGen.EmitLn
 END BeginModule;
 
 
@@ -1069,7 +1196,7 @@ VAR
  * ------------------------------------------------------------------------ *)
 
 TYPE NtAttributes = RECORD
-  CASE  : IR.NonTerminal OF
+  CASE : IR.NonTerminal OF
   | ntreg : reg :
     RECORD (*empty*) END
 
@@ -1139,37 +1266,42 @@ END; (* NtAttributes *)
 
 
 (* ------------------------------------------------------------------------
- * Procedure PerformActions  --  needs clean up
+ * Procedure PerformActions
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE PerformActions (ai : RegAlloc.AllocIndex);
-VAR i : CARDINAL;
+PROCEDURE PerformActions ( ai : RegAlloc.AllocIndex );
+
+VAR
+  index : CARDINAL;
+
+(* uses too many global variables *)
+
 BEGIN
-   WITH RegAlloc.allocation [ai] DO
-      FOR i:=1 TO num DO
-	 WITH a[i] DO
-	    IF action=aLr THEN
-             LR (regto, regfrom);
-    IF IR.OptEmitMatch THEN
-                WriteString (' Copy Register ');
-                PrintRegister (regfrom);
-                WriteString (' into ');
-                PrintRegister (regto);
-                WriteLn;
-    END;
-	    ELSE
-	       Restore (reg, spilllocation);
-    IF IR.OptEmitMatch THEN
-                WriteString (' Restore Register ');
-                PrintRegister (reg);
-                WriteString (' from ');
-                WriteInt (spilllocation,1);
-                WriteLn;
-    END;
-         END;
-	 END;
-     END;
-  END;
+  WITH RegAlloc.allocation [ai] DO
+    FOR index :=1 TO num DO
+      WITH a[index] DO
+        IF action = aLr THEN
+          LR (regto, regfrom);
+          IF IR.OptEmitMatch THEN
+            WriteString(" Copy register ");
+            PrintRegister(regfrom);
+            WriteString(" to ");
+            PrintRegister(regto);
+            WriteLn
+          END (* IF *)
+        ELSE
+          Restore(reg, spilllocation);
+          IF IR.OptEmitMatch THEN
+            WriteString(" Restore register ");
+            PrintRegister(reg);
+            WriteString(" from ");
+            WriteInt(spilllocation, 1);
+            WriteLn
+          END (* IF *)
+        END (* IF *)
+      END (* WITH *)
+    END (* FOR *)
+  END (* WITH *)
 END PerformActions;
 
 
@@ -1177,14 +1309,14 @@ END PerformActions;
  * Procedure WriteNest
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteNest ( i : INTEGER );
+PROCEDURE WriteNest ( level : INTEGER );
 
 VAR
-  j : INTEGER;
+  index : INTEGER;
 
 BEGIN
-  FOR j := 1 TO i DO
-    WriteString (".  ")
+  FOR index := 1 TO level DO
+    WriteString(".  ")
   END (* FOR *)
 END WriteNest;
 
@@ -1193,7 +1325,8 @@ END WriteNest;
  * Procedure WriteAttrreg  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrreg ( at: NtAttributes );
+PROCEDURE WriteAttrreg ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrreg;
@@ -1203,7 +1336,8 @@ END WriteAttrreg;
  * Procedure WriteAttrfreg  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrfreg ( at: NtAttributes );
+PROCEDURE WriteAttrfreg ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrfreg;
@@ -1213,7 +1347,8 @@ END WriteAttrfreg;
  * Procedure WriteAttrfstack  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrfstack ( at: NtAttributes );
+PROCEDURE WriteAttrfstack ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrfstack;
@@ -1223,7 +1358,8 @@ END WriteAttrfstack;
  * Procedure WriteAttrConstant  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrConstant ( at: NtAttributes );
+PROCEDURE WriteAttrConstant ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrConstant;
@@ -1233,7 +1369,8 @@ END WriteAttrConstant;
  * Procedure WriteAttrFloatConstant  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrFloatConstant ( at: NtAttributes );
+PROCEDURE WriteAttrFloatConstant ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrFloatConstant;
@@ -1243,108 +1380,117 @@ END WriteAttrFloatConstant;
  * Procedure WriteAttrFloatConstant  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrSimpleVariable ( at: NtAttributes );
+PROCEDURE WriteAttrSimpleVariable ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrSimpleVariable;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrSymPlusOffset  --  needs reformatting
+ * Procedure WriteAttrSymPlusOffset
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrSymPlusOffset ( at: NtAttributes );
+PROCEDURE WriteAttrSymPlusOffset ( at : NtAttributes );
+
 BEGIN
-       WriteString ('symbol=');
-       PrintRelSymb ( at.SymPlusOffset.symbol );
-       Write (' ');
+  WriteString("symbol=");
+  PrintRelSymb(at.SymPlusOffset.symbol);
+  Write(" ")
 END WriteAttrSymPlusOffset;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrRegPlusSymPlusOffset  --  needs reformatting
+ * Procedure WriteAttrRegPlusSymPlusOffset
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrRegPlusSymPlusOffset (at: NtAttributes);
+PROCEDURE WriteAttrRegPlusSymPlusOffset ( at : NtAttributes );
+
 BEGIN
-       WriteString ('base=');
-       PrintRegister ( at.RegPlusSymPlusOffset.base );
-       Write (' ');
-       WriteString ('symbol=');
-       PrintRelSymb ( at.RegPlusSymPlusOffset.symbol );
-       Write (' ');
+  WriteString("base=");
+  PrintRegister(at.RegPlusSymPlusOffset.base);
+  Write(" ");
+  WriteString("symbol=");
+  PrintRelSymb(at.RegPlusSymPlusOffset.symbol);
+  Write(" ")
 END WriteAttrRegPlusSymPlusOffset;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrOffsetPlusIndexMultFaktor  --  needs reformatting
+ * Procedure WriteAttrOffsetPlusIndexMultFaktor
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrOffsetPlusIndexMultFaktor (at: NtAttributes);
+PROCEDURE WriteAttrOffsetPlusIndexMultFaktor ( at : NtAttributes );
+
 BEGIN
-       WriteString ('index=');
-       PrintRegister ( at.OffsetPlusIndexMultFaktor.index );
-       Write (' ');
+  WriteString("index=");
+  PrintRegister(at.OffsetPlusIndexMultFaktor.index);
+  Write(" ")
 END WriteAttrOffsetPlusIndexMultFaktor;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrmem  --  needs reformatting
+ * Procedure WriteAttrmem
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrmem ( at: NtAttributes );
+PROCEDURE WriteAttrmem ( at : NtAttributes );
+
 BEGIN
-       WriteString ('am=');
-       PrintMemAdr ( at.mem.am );
-       Write (' ');
+  WriteString("am=");
+  PrintMemAdr(at.mem.am);
+  Write(" ")
 END WriteAttrmem;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrCMem  --  needs reformatting
+ * Procedure WriteAttrCMem
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrCMem (at: NtAttributes);
+PROCEDURE WriteAttrCMem ( at : NtAttributes );
+
 BEGIN
-       WriteString ('am=');
-       PrintMemAdr ( at.CMem.am );
-       Write (' ');
+  WriteString("am=");
+  PrintMemAdr(at.CMem.am);
+  Write(" ")
 END WriteAttrCMem;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrRegOrIm  --  needs reformatting
+ * Procedure WriteAttrRegOrIm
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrRegOrIm (at: NtAttributes);
+PROCEDURE WriteAttrRegOrIm ( at : NtAttributes );
+
 BEGIN
-       WriteString ('am=');
-       PrintAdrMode ( at.RegOrIm.am );
-       Write (' ');
+  WriteString("am=");
+  PrintAdrMode(at.RegOrIm.am);
+  Write(" ")
 END WriteAttrRegOrIm;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrRegOrCMem  --  needs reformatting
+ * Procedure WriteAttrRegOrCMem
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrRegOrCMem (at: NtAttributes);
+PROCEDURE WriteAttrRegOrCMem ( at : NtAttributes );
+
 BEGIN
-       WriteString ('am=');
-       PrintAdrMode ( at.RegOrCMem.am );
-       Write (' ');
+  WriteString("am=");
+  PrintAdrMode(at.RegOrCMem.am);
+  Write(" ")
 END WriteAttrRegOrCMem;
 
 
 (* ------------------------------------------------------------------------
- * Procedure WriteAttrRegOrCMemOrIm  --  needs reformatting
+ * Procedure WriteAttrRegOrCMemOrIm
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrRegOrCMemOrIm (at: NtAttributes);
+PROCEDURE WriteAttrRegOrCMemOrIm ( at : NtAttributes );
+
 BEGIN
-       WriteString ('am=');
-       PrintAdrMode ( at.RegOrCMemOrIm.am );
-       Write (' ');
+  WriteString("am=");
+  PrintAdrMode(at.RegOrCMemOrIm.am);
+  Write(" ")
 END WriteAttrRegOrCMemOrIm;
 
 
@@ -1352,7 +1498,8 @@ END WriteAttrRegOrCMemOrIm;
  * Procedure WriteAttrarglist  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrarglist ( at: NtAttributes );
+PROCEDURE WriteAttrarglist ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrarglist;
@@ -1362,298 +1509,511 @@ END WriteAttrarglist;
  * Procedure WriteAttrloadln2  --  does nothing
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE WriteAttrloadln2 (at: NtAttributes);
+PROCEDURE WriteAttrloadln2 ( at : NtAttributes );
+
 BEGIN
   (*empty*)
 END WriteAttrloadln2;
 
 
 (* ------------------------------------------------------------------------
- * Procedure EmitNtreg  --  needs clean up
+ * Procedure EmitNtreg
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitNtreg
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
+
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
-  AT2   :  NtAttributes;
+  at0 :  NtAttributes;
+  at1 :  NtAttributes;
+  at2 :  NtAttributes;
+
 BEGIN
   CASE e^.gcg^.rule [ntreg] OF
   | 70 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 70/2807 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FunctionCall ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+    EmitNtfreg(e^.son[1]^.son[2], nest+1, at0);
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
 
- CodeGen.EmitString('	subl	$4,%esp');  CodeGen.EmitLn;
-	CheckRoundMode (RndZero);
- CodeGen.EmitString('	fistpl	(%esp)');  CodeGen.EmitLn;
- CodeGen.EmitString('	popl	');  EmitRegister(RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
-	PopFStack;
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 70/2807 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" FunctionCall -> reg");
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation(ai)
+      END; (* IF *)
 
-   | 71 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 71/2763 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FunctionCall ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("subl");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("$4,%esp");
+      CodeGen.EmitLn;
 
- CodeGen.EmitString('	subl	$4,%esp');  CodeGen.EmitLn;
-	CheckRoundMode (RndNegInf);
- CodeGen.EmitString('	fistpl	(%esp)');  CodeGen.EmitLn;
- CodeGen.EmitString('	popl	');  EmitRegister(RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
-	PopFStack;
+      CheckRoundMode(RndZero);
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fistpl");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("%esp)");
+      CodeGen.EmitLn;
 
-   | 72 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 72/2522 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FunctionCall ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("popl");
+      CodeGen.EmitTab;
+      EmitRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn;
 
-	SpillFStack;
-	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	call	');  CodeGen.EmitString( e^.son[2]^.attr^.ProcedureConstant.index^.Entry^);  CodeGen.EmitLn;
-	IF e^.attr^.FunctionCall.paramsize # 0 THEN
-	(* e^.attr^.FunctionCall.paramsize := (e^.attr^.FunctionCall.paramsize+3) DIV 4 * 4; *)
- CodeGen.EmitString('	addl	$');  CodeGen.EmitInt( e^.attr^.FunctionCall.paramsize);  CodeGen.EmitString(', %esp');  CodeGen.EmitLn;
-	END;
+      PopFStack
 
-   | 73 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 73/2507 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FunctionCall ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+    | 71 :
+      EmitNtfreg(e^.son[1]^.son[2], nest+1, at0);
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
 
-	SpillFStack;
-	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	call	');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
-	IF e^.attr^.FunctionCall.paramsize # 0 THEN
-	(* e^.attr^.FunctionCall.paramsize := (e^.attr^.FunctionCall.paramsize+3) DIV 4 * 4; *)
- CodeGen.EmitString('	addl	$');  CodeGen.EmitInt( e^.attr^.FunctionCall.paramsize);  CodeGen.EmitString(', %esp');  CodeGen.EmitLn;
-	END;
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 71/2763 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString (" FunctionCall -> reg");
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation(ai)
+      END; (* IF *)
 
-   | 74 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 74/2158 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' TestOdd ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("subl");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("$4,%esp");
+      CodeGen.EmitLn;
 
- CodeGen.EmitString('	and');  EmitSuffix( e^.attr^.TestOdd.mode);  CodeGen.EmitString('	$1,');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.TestOdd.mode);  CodeGen.EmitLn;
-	IF NOT e^.attr^.TestOdd.cond THEN
- CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.TestOdd.mode);  CodeGen.EmitString('	$1,');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.TestOdd.mode);  CodeGen.EmitLn;
-	END;
+      CheckRoundMode(RndNegInf);
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fistpl");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("(%esp)");
+      CodeGen.EmitLn;
 
-   | 75 :
-  EmitNtRegOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMem(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 75/2146 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' TestMembershipL ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("popl");
+      CodeGen.EmitTab;
+      EmitRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn;
 
- CodeGen.EmitString('	btl	');  EmitAdrMode( AT0.RegOrIm.am);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
-	IF e^.attr^.TestMembershipL.cond THEN
- CodeGen.EmitString('	setb	');  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
-	ELSE
- CodeGen.EmitString('	setnb	');  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
-	END;
+      PopFStack
 
-   | 76 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 76/2114 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' SetCompare ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+    | 72 :
+      EmitNtarglist(e^.son[1], nest+1, at0);
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num> 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 72/2522 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" FunctionCall -> reg");
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest (nest);
+        RegAlloc.PrintAllocation (ai)
+      END; (* IF *)
 
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
-	CASE e^.attr^.SetCompare.rel OF
-	| RelLess:
- CodeGen.EmitString('	or	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
-	e^.attr^.SetCompare.rel := RelUnequal;
-	| RelLessOrEqual:
- CodeGen.EmitString('	and	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
-	e^.attr^.SetCompare.rel := RelEqual;
-	| RelGreater:
- CodeGen.EmitString('	and	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
-	e^.attr^.SetCompare.rel := RelUnequal;
-	| RelGreaterOrEqual:
- CodeGen.EmitString('	or	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
-	e^.attr^.SetCompare.rel := RelEqual;
-	END;
- CodeGen.EmitString('	cmpl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+      SpillFStack;
+      CurRoundMode := RndUnknown;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("call");
+      CodeGen.EmitTab;
+      CodeGen.EmitString(e^.son[2]^.attr^.ProcedureConstant.index^.Entry^);
+      CodeGen.EmitLn;
 
-   | 77 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 77/2105 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' SetCompare ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      IF e^.attr^.FunctionCall.paramsize # 0 THEN
+      (* e^.attr^.FunctionCall.paramsize :=
+          (e^.attr^.FunctionCall.paramsize+3) DIV 4 * 4; *)
+        CodeGen.EmitTab;
+        CodeGen.EmitString("addl");
+        CodeGen.EmitTab;
+        CodeGen.EmitChar("$");
+        CodeGen.EmitInt(e^.attr^.FunctionCall.paramsize);
+        CodeGen.EmitString(", %esp");
+        CodeGen.EmitLn
+      END; (* IF *)
 
- CodeGen.EmitString('	cmpl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompare.rel][FALSE]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+    | 73 :
+      EmitNtarglist(e^.son[1], nest+1, at0);
+      EmitNtreg(e^.son[2], nest+1, at1);
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
 
-   | 78 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 78/2087 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FloatCompare ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 73/2507 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" FunctionCall -> reg");
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation(ai)
+      END;
 
-	INC (FStackStart);
-	IF FStackTempo[FStackStart] # NoTempo THEN
- CodeGen.EmitString('	fcompl	');  CodeGen.EmitInt( FStackTempo[FStackStart]);  CodeGen.EmitString('(%ebp)');  CodeGen.EmitLn;
-	  DEC (CurFStackSize);
-	ELSE
- CodeGen.EmitString('	fcompp');  CodeGen.EmitLn;
-	  DEC (CurFStackSize, 2);
-	END;
- CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
- CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+      SpillFStack;
+      CurRoundMode := RndUnknown;
+      CodeGen.EmitTab;
+      CodeGen.EmitString("call");
+      CodeGen.EmitTab;
+      EmitRegister(RegAlloc.allocation[ai].op[2]);
+      CodeGen.EmitLn;
 
-   | 79 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
-       ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
-          PerformActions (ai);
-       END;
-       IF IR.OptEmitMatch THEN
-          WriteNest (nest);
-          WriteString ('Rule 79/2075 Cost=');
-          WriteInt    (e^.gcg^.cost [ntreg],1);
-          WriteString (' FloatCompare ->   reg');
-          WriteLn;
-          WriteNest (nest);
-          WriteCard (CARDINAL(e),1); Write(' ');
-          IF e#NIL THEN IR.PrintAttributes (e^.attr^); ELSE WriteLn; END;
-          WriteNest (nest);
-          RegAlloc.PrintAllocation (ai);
-       END;
+      IF e^.attr^.FunctionCall.paramsize # 0 THEN
+      (* e^.attr^.FunctionCall.paramsize :=
+        (e^.attr^.FunctionCall.paramsize+3) DIV 4 * 4; *)
+        CodeGen.EmitTab;
+        CodeGen.EmitString("addl");
+        CodeGen.EmitTab;
+        CodeGen.EmitChar("$");
+        CodeGen.EmitInt(e^.attr^.FunctionCall.paramsize);
+        CodeGen.EmitString(", %esp");
+        CodeGen.EmitLn
+      END (* IF *)
 
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
- CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
- CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompare.rel]][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
-	PopFStack;
+    | 74 :
+      EmitNtreg(e^.son[1],nest+1,AT0 );
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
+
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 74/2158 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" TestOdd -> reg");
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation (ai)
+      END; (* IF *)
+
+      CodeGen.EmitTab;
+      CodeGen.EmitString("and");
+      EmitSuffix(e^.attr^.TestOdd.mode);
+      CodeGen.EmitTab;
+      CodeGen.EmitString("$1, ");
+      EmitRegister2(RegAlloc.allocation[ai].op[1],e^.attr^.TestOdd.mode);
+      CodeGen.EmitLn;
+
+      IF NOT e^.attr^.TestOdd.cond THEN
+        CodeGen.EmitTab;
+        CodeGen.EmitString("xor");
+        EmitSuffix(e^.attr^.TestOdd.mode);
+        CodeGen.EmitTab;
+        CodeGen.EmitString("$1, ");
+        EmitRegister2(RegAlloc.allocation[ai].op[1],e^.attr^.TestOdd.mode);
+        CodeGen.EmitLn
+      END; (* IF *)
+
+    | 75 :
+      EmitNtRegOrIm(e^.son[1], nest+1, at0);
+      EmitNtRegOrCMem(e^.son[2], nest+1, at1);
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions (ai)
+      END; (* IF *)
+
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString("Rule 75/2146 cost=");
+        WriteInt(e^.gcg^.cost [ntreg], 1);
+        WriteString(' TestMembershipL -> reg');
+        WriteLn;
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation(ai)
+      END; (* IF *)
+
+      CodeGen.EmitTab;
+      CodeGen.EmitString("btl");
+      CodeGen.EmitTab;
+      EmitAdrMode(at0.RegOrIm.am);
+      CodeGen.EmitString(", ");
+      EmitAdrMode(at1.RegOrCMem.am);
+      CodeGen.EmitLn;
+
+      IF e^.attr^.TestMembershipL.cond THEN
+        CodeGen.EmitString('	setb	');
+        EmitByteRegister( RegAlloc.allocation[ai].reg);
+        CodeGen.EmitLn
+      ELSE
+        CodeGen.EmitTab;
+        CodeGen.EmitString("setnb");
+        CodeGen.EmitTab;
+        EmitByteRegister(RegAlloc.allocation[ai].reg);
+        CodeGen.EmitLn
+      END (* IF *)
+
+    | 76 :
+      EmitNtreg(e^.son[1],nest+1,AT0 );
+      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+      ai:=ai-1;
+      IF RegAlloc.allocation [ai]. num>0 THEN
+        PerformActions (ai);
+      END; (* IF *)
+      IF IR.OptEmitMatch THEN
+        WriteNest (nest);
+        WriteString ('Rule 76/2114 Cost=');
+        WriteInt    (e^.gcg^.cost [ntreg],1);
+        WriteString (' SetCompare ->   reg');
+        WriteLn;
+        WriteNest (nest);
+        WriteCard (CARDINAL(e),1); Write(' ');
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest (nest);
+        RegAlloc.PrintAllocation (ai);
+      END; (* IF *)
+
+      CodeGen.EmitString('	movl	');
+      EmitRegister(RegAlloc.allocation[ai].op[1]);
+      CodeGen.EmitChar(',');
+      EmitRegister(RegAlloc.allocation[ai].scr[1]);
+      CodeGen.EmitLn;
+
+      CASE e^.attr^.SetCompare.rel OF
+      | RelLess :
+        CodeGen.EmitString('	or	');
+        EmitAdrMode(at1.RegOrCMemOrIm.am);
+        CodeGen.EmitChar(',');
+        EmitRegister(RegAlloc.allocation[ai].scr[1]);
+        CodeGen.EmitLn;
+        e^.attr^.SetCompare.rel := RelUnequal
+
+      | RelLessOrEqual :
+        CodeGen.EmitString('	and	');
+        EmitAdrMode(at1.RegOrCMemOrIm.am);
+        CodeGen.EmitChar(',');
+        EmitRegister(RegAlloc.allocation[ai].scr[1]);
+        CodeGen.EmitLn;
+        e^.attr^.SetCompare.rel := RelEqual
+
+      | RelGreater :
+        CodeGen.EmitString('	and	');
+        EmitAdrMode(at1.RegOrCMemOrIm.am);
+        CodeGen.EmitChar(',');
+        EmitRegister(RegAlloc.allocation[ai].scr[1]);
+        CodeGen.EmitLn;
+        e^.attr^.SetCompare.rel := RelUnequal
+
+      | RelGreaterOrEqual :
+        CodeGen.EmitString('	or	');
+        EmitAdrMode(at1.RegOrCMemOrIm.am);
+        CodeGen.EmitChar(',');
+        EmitRegister(RegAlloc.allocation[ai].scr[1]);
+        CodeGen.EmitLn;
+        e^.attr^.SetCompare.rel := RelEqual
+      END; (* CASE *)
+
+      CodeGen.EmitString('	cmpl	');
+      EmitRegister(RegAlloc.allocation[ai].scr[1]);
+      CodeGen.EmitChar(',');
+      EmitRegister(RegAlloc.allocation[ai].op[1]);
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	set');
+      CodeGen.EmitString(RelationTable[e^.attr^.SetCompare.rel][FALSE]);
+      CodeGen.EmitTab;
+      EmitByteRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn
+
+    | 77 :
+      EmitNtreg(e^.son[1],nest+1,AT0 );
+      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
+
+      IF IR.OptEmitMatch THEN
+        WriteNest (nest);
+        WriteString ('Rule 77/2105 Cost=');
+        WriteInt    (e^.gcg^.cost [ntreg],1);
+        WriteString (' SetCompare ->   reg');
+        WriteLn;
+        WriteNest (nest);
+        WriteCard (CARDINAL(e),1); Write(' ');
+        IF e#NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest (nest);
+        RegAlloc.PrintAllocation (ai);
+      END; (* IF *)
+
+      CodeGen.EmitString('	cmpl	');
+      EmitAdrMode(at1.RegOrCMemOrIm.am);
+      CodeGen.EmitChar(',');
+      EmitRegister(RegAlloc.allocation[ai].op[1]);
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	set');
+      CodeGen.EmitString(RelationTable[e^.attr^.SetCompare.rel][FALSE]);
+      CodeGen.EmitTab;
+      EmitByteRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn
+
+    | 78 :
+      EmitNtfstack(e^.son[1], nest+1, at0 );
+      EmitNtfreg(e^.son[2], nest+1, at1 );
+      ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
+
+      IF IR.OptEmitMatch THEN
+        WriteNest (nest);
+        WriteString ('Rule 78/2087 Cost=');
+        WriteInt    (e^.gcg^.cost [ntreg],1);
+        WriteString (' FloatCompare ->   reg');
+        WriteLn;
+        WriteNest (nest);
+        WriteCard (CARDINAL(e),1); Write(' ');
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END; (* IF *)
+        WriteNest(nest);
+        RegAlloc.PrintAllocation(ai)
+      END; (* IF *)
+
+      INC(FStackStart);
+      IF FStackTempo[FStackStart] # NoTempo THEN
+        CodeGen.EmitString('	fcompl	');
+        CodeGen.EmitInt(FStackTempo[FStackStart]);
+        CodeGen.EmitString('(%ebp)');
+        CodeGen.EmitLn;
+        DEC(CurFStackSize)
+      ELSE
+        CodeGen.EmitString('	fcompp');
+        CodeGen.EmitLn;
+        DEC(CurFStackSize, 2)
+      END; (* IF *)
+
+      CodeGen.EmitString('	fstsw	%ax');
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	sahf');
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	set');
+      CodeGen.EmitString
+        (RelationTable[Reverse[e^.attr^.FloatCompare.rel]]
+          [SignedTable[e^.attr^.FloatCompare.mode]]);
+      CodeGen.EmitTab;
+      EmitByteRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn
+
+    | 79 :
+      EmitNtCMem(e^.son[1],nest+1, at0);
+      EmitNtfreg(e^.son[2],nest+1, at1);
+        ai := ai - 1;
+      IF RegAlloc.allocation[ai].num > 0 THEN
+        PerformActions(ai)
+      END; (* IF *)
+
+      IF IR.OptEmitMatch THEN
+        WriteNest(nest);
+        WriteString('Rule 79/2075 Cost=');
+        WriteInt(e^.gcg^.cost [ntreg],1);
+        WriteString(' FloatCompare -> reg');
+        WriteLn;
+        WriteNest (nest);
+        WriteCard (CARDINAL(e),1); Write(' ');
+        IF e # NIL THEN
+          IR.PrintAttributes(e^.attr^)
+        ELSE
+          WriteLn
+        END;
+        WriteNest (nest);
+        RegAlloc.PrintAllocation(ai)
+      END; (* IF *)
+
+      CodeGen.EmitString('	fcomp');
+      EmitSuffix(e^.son[1]^.gcg^.CMem.mode);
+      CodeGen.EmitTab;
+      EmitMemAdr(at0.CMem.am);
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	fstsw	%ax');
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	sahf');
+      CodeGen.EmitLn;
+
+      CodeGen.EmitString('	set');
+      CodeGen.EmitString
+        (RelationTable[Reverse[e^.attr^.FloatCompare.rel]]
+          [SignedTable[e^.attr^.FloatCompare.mode]]);
+      CodeGen.EmitTab;
+      EmitByteRegister(RegAlloc.allocation[ai].reg);
+      CodeGen.EmitLn;
+
+      PopFStack
+
+      (* Reformatting done until this point *)
 
    | 80 :
   EmitNtfreg(e^.son[1],nest+1,AT0 );
