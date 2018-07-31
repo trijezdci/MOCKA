@@ -19,7 +19,7 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 ### Current Release
 * **Version 1807**, updated July 2018
 
-For version change log, see file CHANGES
+For version change log, see [./ver1807/CHANGES.md](https://github.com/trijezdci/MOCKA/blob/master/ver1807/CHANGES.md)
 
 ### Release History
 * last maintenance release 0608 from Uni Karlsruhe in August 2006
@@ -27,6 +27,6 @@ For version change log, see file CHANGES
 * clean-up release 1807 by B.Kowarsch in July 2018, based on 1208
 * revised release 1808 by B.Kowarsch in August 2018, **work in progress**
 
-For scope of work for version 1808, see file [./ver1808/AAA_SCOPE_OF_WORK.md](https://github.com/trijezdci/MOCKA/blob/master/ver1808/AAA_SCOPE_OF_WORK.md)
+For scope of work for version 1808, see [./ver1808/AAA_SCOPE_OF_WORK.md](https://github.com/trijezdci/MOCKA/blob/master/ver1808/AAA_SCOPE_OF_WORK.md)
 
 \[END OF FILE\]
