@@ -13,13 +13,13 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 ### Language Extensions
 * Conditional compilation directives
 * Lowline `_` and dollar `$` in identifiers
-* Types BYTE, SHORTCARD, SHORTINT, LONGCARD
-* FOREIGN DEFINITION MODULE for interfacing to C
+* Types `BYTE`, `SHORTCARD`, `SHORTINT`, `LONGCARD`
+* `FOREIGN DEFINITION MODULE` for interfacing to C
 
 ### Current Release
 * [Version 1807](https://github.com/trijezdci/MOCKA/blob/master/ver1807), updated July 2018
 
-For **version change log**, see [CHANGES](https://github.com/trijezdci/MOCKA/blob/master/ver1807/CHANGES.md) in subdirectory ver1807.
+For **version change log**, see [CHANGES](https://github.com/trijezdci/MOCKA/blob/master/ver1807/CHANGES.md)
 
 ### Release History
 * last maintenance release 0608 from Uni Karlsruhe in August 2006
@@ -27,6 +27,6 @@ For **version change log**, see [CHANGES](https://github.com/trijezdci/MOCKA/blo
 * clean-up release 1807 by B.Kowarsch in July 2018, based on 1208
 * revised release 1808 by B.Kowarsch in August 2018, **work in progress**
 
-For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.com/trijezdci/MOCKA/blob/master/ver1808/AAA_SCOPE_OF_WORK.md) in subdirectory ver1808
+For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.com/trijezdci/MOCKA/blob/master/ver1808/AAA_SCOPE_OF_WORK.md)
 
 \[END OF FILE\]
