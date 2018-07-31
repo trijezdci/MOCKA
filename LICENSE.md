@@ -5,11 +5,11 @@ for diverse Unix platforms. A back end generator called BEG was also developed i
 the compiler's back ends for multiple target architectures automatically from a formal target description.
 
 The MOCKA version for Linux and BSD on the Intel x86 platform was however released open-source under the
-GPL license. This included the automatically generated source code of the compiler's x86 back-end, but
-without the BEG software that generated these sources and without the code optimiser that was included
-in commercial versions of MOCKA.
+[GPL license](https://www.gnu.org/licenses/licenses.html#GPL). This included the automatically generated
+source code of the compiler's x86 back-end, but without the BEG software that generated these sources
+and without the code optimiser that was included in commercial versions of MOCKA.
 
-The MOCKA software in this repository is a derivative of this open-source version under [GPL licensing](https://www.gnu.org/licenses/licenses.html#GPL).
+The MOCKA software in this repository is a derivative of this open-source version under GPL licensing.
 
 Although the GPL license demands that the license is distributed together with the software, the MOCKA
 distribution packages did not include any LICENSE file and the official MOCKA website is no longer online.
