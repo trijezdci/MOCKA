@@ -30,6 +30,6 @@ For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.c
 * last maintenance [release 0605](http://www.info.uni-karlsruhe.de/projects.php/id=37) from Uni Karlsruhe in May 2006
 * minor [release 1208](http://lwb.mi.fu-berlin.de/inf/mocka/installation.shtml) by Chr. Maurer in August 2012, based on 0605
 * clean-up [release 1807](https://github.com/trijezdci/MOCKA/blob/master/ver1807) by B.Kowarsch in July 2018, based on 1208
-* **work in progress** [release 1808](https://github.com/trijezdci/MOCKA/blob/master/ver1808) by B.Kowarsch in August 2018, based on 1807
+* **work in progress** [release 1808](https://github.com/trijezdci/MOCKA/blob/master/ver1808) by B.Kowarsch, based on 1807
 
 \[END OF FILE\]
