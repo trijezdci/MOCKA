@@ -67,6 +67,8 @@ IMPLEMENTATION MODULE Emit;
  * (8) added new procedure EmitProcDecl to replace DeclareProcedure.
  * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *)
 
+IMPORT MockaBuildParams;
+
 IMPORT IR;
 
 IMPORT RegAlloc;
@@ -174,7 +176,11 @@ CONST
   MaxFloatTempo = 64; (* Max. size of Float-Stack *)
   MaxPowerTable	 = 31;
   NoTempo = 1111111111;
-  EmitAnnotations = FALSE; (* Annotations on/off *)
+
+  TAB = CHR(9);
+  SPACE = CHR(32);
+
+  EmitAnnotations = MockaBuildParams.AssemblyAnnotations;
 
 
 VAR
@@ -306,18 +312,23 @@ PROCEDURE Spill ( reg : Register; loc : Spilllocation );
 
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
-    CodeGen.EmitString('	pushl	');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("pushl");
+    CodeGen.EmitTab;
     EmitRegister(reg);
     CodeGen.EmitLn;
+
     IF EmitAnnotations THEN
-      CodeGen.EmitString('					/* Spill */');
+      CodeGen.EmitCharNTimes(TAB, 5);
+      CodeGen.EmitString("/* Spill */");
       CodeGen.EmitLn
     END (* IF *)
   ELSE
     IF EmitAnnotations THEN
-      CodeGen.EmitString(' 					/* Spill ');
+      CodeGen.EmitCharNTimes(TAB, 5);
+      CodeGen.EmitString("/* Spill ");
       EmitRegister(reg);
-      CodeGen.EmitString(' */');
+      CodeGen.EmitString(" */");
       CodeGen.EmitLn
     END (* IF *)
   END (* IF *)
@@ -332,16 +343,20 @@ PROCEDURE Restore ( reg : Register; loc : Spilllocation );
 
 BEGIN
   IF (reg # Regst) AND (reg # Regst1) THEN
-    CodeGen.EmitString('	popl	');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("popl");
+    CodeGen.EmitTab;
     EmitRegister(reg);
     CodeGen.EmitLn;
     IF EmitAnnotations THEN
-      CodeGen.EmitString('					/* Restore */');
+      CodeGen.EmitCharNTimes(TAB, 5);
+      CodeGen.EmitString("/* Restore */");
       CodeGen.EmitLn
     END (* IF *)
   ELSE
     IF EmitAnnotations THEN
-      CodeGen.EmitString(' 					/* Restore ');
+      CodeGen.EmitCharNTimes(TAB, 5);
+      CodeGen.EmitString("/* Restore ");
       EmitRegister(reg);
       CodeGen.EmitString(' */');
       CodeGen.EmitLn
@@ -362,15 +377,20 @@ VAR
 BEGIN
   FOR i := 0 TO CurFStackSize-1 DO
     DeclareTempo(FloatLong, FStackTempo[FStackStart + i]);
-    CodeGen.EmitString('	fstpl	');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("fstpl");
+    CodeGen.EmitTab;
     CodeGen.EmitInt( FStackTempo[FStackStart+i]);
-    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitString("(%ebp)");
     CodeGen.EmitLn;
+
     IF EmitAnnotations THEN
-      CodeGen.EmitString('					/* SpillFstack */');
+      CodeGen.EmitCharNTimes(TAB, 5);
+      CodeGen.EmitString("/* SpillFstack */");
       CodeGen.EmitLn
     END (* IF *)
   END; (* FOR *)
+
   CurFStackSize := 0
 END SpillFStack;
 
@@ -386,22 +406,32 @@ BEGIN
   IF CurFStackSize = 8 THEN
     (* tiefstes Stackelement als Tempo in den Speicher legen *)
     DeclareTempo(FloatLong, FStackTempo[FStackStart + 7]);
-    CodeGen.EmitString('	fxch	%st(7)');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("fxch");
+    CodeGen.EmitTab;
+    CodeGen.EmitString("%st(7)");
     CodeGen.EmitLn;
 
-    CodeGen.EmitString('	fstl	');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("fstl");
+    CodeGen.EmitTab;
     CodeGen.EmitInt(FStackTempo[FStackStart+7]);
-    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitString("(%ebp)");
     CodeGen.EmitLn;
 
-    CodeGen.EmitString('	fxch	%st(7)');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("fxch");
+    CodeGen.EmitTab;
+    CodeGen.EmitString("%st(7)");
     CodeGen.EmitLn;
 
-    CodeGen.EmitString('	ffree	%st(7)');
+    CodeGen.EmitTab;
+    CodeGen.EmitString("ffree	%st(7)");
     CodeGen.EmitLn
   ELSE
     INC (CurFStackSize)
   END; (* IF *)
+
   DEC(FStackStart);
   FStackTempo[FStackStart] := NoTempo
 END PushFStack;
@@ -431,16 +461,19 @@ BEGIN
   IF FStackTempo[FStackStart] # NoTempo THEN
     CodeGen.EmitTab;
     CodeGen.EmitString(op);
-    CodeGen.EmitString('l	');
-    CodeGen.EmitInt( FStackTempo[FStackStart]);
-    CodeGen.EmitString('(%ebp)');
+    CodeGen.EmitChar("l");
+    CodeGen.EmitTab;
+    CodeGen.EmitInt(FStackTempo[FStackStart]);
+    CodeGen.EmitString("(%ebp)");
     CodeGen.EmitLn;
 
     FStackTempo[FStackStart] := NoTempo
   ELSE
     CodeGen.EmitTab;
     CodeGen.EmitString(op);
-    CodeGen.EmitString('p	%st,%st(1)');
+    CodeGen.EmitChar("p");
+    CodeGen.EmitTab;
+    CodeGen.EmitString("%st, %st(1)");
     CodeGen.EmitLn;
 
     DEC(CurFStackSize)
@@ -457,19 +490,31 @@ BEGIN
   IF CurRoundMode # newmode THEN
     CASE newmode OF
     | RndNearest :
-      CodeGen.EmitString('	fldcw	fpucw_round_to_nearest');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fldcw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fpucw_round_to_nearest");
       CodeGen.EmitLn
 
     | RndZero :
-      CodeGen.EmitString('	fldcw	fpucw_round_to_zero');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fldcw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fpucw_round_to_zero");
       CodeGen.EmitLn
 
     | RndInf :
-      CodeGen.EmitString('	fldcw	fpucw_round_to_inf');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fldcw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fpucw_round_to_inf");
       CodeGen.EmitLn
 
     | RndNegInf :
-      CodeGen.EmitString('	fldcw	fpucw_round_to_neginf');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fldcw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fpucw_round_to_neginf");
       CodeGen.EmitLn
 
     ELSE
@@ -515,9 +560,11 @@ PROCEDURE EmitIndex ( VAR base : MemAdr; index : MemAdr; reg : Register );
 BEGIN
   IF NOT IsNilMemAdr(index) THEN
    base.index := reg;
-   CodeGen.EmitString('	movl	');
+   CodeGen.EmitTab;
+   CodeGen.EmitString("movl");
+   CodeGen.EmitTab;
    EmitMemAdr(index);
-   CodeGen.EmitChar(',');
+   CodeGen.EmitString(", ");
    EmitRegister(reg);
    CodeGen.EmitLn
   END (* IF *)
@@ -531,11 +578,11 @@ END EmitIndex;
 PROCEDURE EmitRegister ( r : Register );
 
 BEGIN
-  CodeGen.EmitChar('%');
+  CodeGen.EmitChar("%");
   IF r # Regst1 THEN
     CodeGen.EmitString(IR.RegNameTable[r])
   ELSE
-    CodeGen.EmitString('st(1)')
+    CodeGen.EmitString("st(1)")
   END (* IF *)
 END EmitRegister;
 
@@ -553,11 +600,11 @@ BEGIN
   | 2 :
     CodeGen.EmitString(WordReg[r])
 
-  | 4, 8: CodeGen.EmitChar('%');
+  | 4, 8: CodeGen.EmitChar("%");
     CodeGen.EmitString(IR.RegNameTable[r])
 
   ELSE
-    CompilerError('Backend: Unknown Register Size')
+    CompilerError("Backend: Unknown Register Size")
   END (* CASE *)
 END EmitRegister2;
 
@@ -626,17 +673,17 @@ BEGIN
         base := index;
         faktor := 0
       END; (* IF *)
-      CodeGen.EmitChar('(');
+      CodeGen.EmitChar("(");
       IF base > RegNil THEN
         EmitRegister(base)
       END; (* IF *)
       IF (index > RegNil) AND (faktor > 0) THEN
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         EmitRegister(index);
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         CodeGen.EmitInt(faktor)
       END; (* IF *)
-      CodeGen.EmitChar(')')
+      CodeGen.EmitChar(")")
     END (* IF *)
   END (* WITH *)
 END EmitMemAdr;
@@ -722,7 +769,7 @@ END DeclareModule;
  * Number of significant chars of module qualifier and procedure identifier
  * ------------------------------------------------------------------------ *)
 
-CONST SignificantChars = 39;
+CONST SignificantChars = MockaBuildParams.SignificantChars;
 
 
  (* ------------------------------------------------------------------------
@@ -875,7 +922,7 @@ BEGIN
     END; (* IF *)
 
     IF StringLength(t)+1+StringLength(ProcName) >= 80 THEN
-      (* Produce Name and Number   *)
+      (* Produce Name and Number *)
       ConvertLONGINTtoString(ProcNumber, s);
       StringAssign(t, module^.Name^);
       StringAppend1(t, '_');
@@ -929,9 +976,6 @@ CONST
   (* the shortest possible label is an unqualified single letter identifier
      which requires a capacity of two characters, including NUL terminator. *)
   MinLabelCapacity = 2;
-
-  (* significant length of qualifiers and identifiers *)
-  SignificantChars = 39;
 
 VAR
   ch : CHAR;
@@ -1059,7 +1103,7 @@ BEGIN
   CodeGen.EmitLn;
 
   CodeGen.EmitString( ref^);
-  CodeGen.EmitChar(':');
+  CodeGen.EmitChar(":");
   CodeGen.EmitLn;
 
   CodeGen.EmitTab;
@@ -1527,9 +1571,9 @@ PROCEDURE EmitNtreg
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 
 VAR
-  at0 :  NtAttributes;
-  at1 :  NtAttributes;
-  at2 :  NtAttributes;
+  at0 : NtAttributes;
+  at1 : NtAttributes;
+  at2 : NtAttributes;
 
 BEGIN
   CASE e^.gcg^.rule [ntreg] OF
@@ -1561,7 +1605,7 @@ BEGIN
       CodeGen.EmitTab;
       CodeGen.EmitString("subl");
       CodeGen.EmitTab;
-      CodeGen.EmitString("$4,%esp");
+      CodeGen.EmitString("$4, %esp");
       CodeGen.EmitLn;
 
       CheckRoundMode(RndZero);
@@ -1607,7 +1651,7 @@ BEGIN
       CodeGen.EmitTab;
       CodeGen.EmitString("subl");
       CodeGen.EmitTab;
-      CodeGen.EmitString("$4,%esp");
+      CodeGen.EmitString("$4, %esp");
       CodeGen.EmitLn;
 
       CheckRoundMode(RndNegInf);
@@ -1716,7 +1760,7 @@ BEGIN
       END (* IF *)
 
     | 74 :
-      EmitNtreg(e^.son[1],nest+1,AT0 );
+      EmitNtreg(e^.son[1],nest+1,at0 );
       ai := ai - 1;
       IF RegAlloc.allocation[ai].num > 0 THEN
         PerformActions(ai)
@@ -1770,7 +1814,7 @@ BEGIN
         WriteNest(nest);
         WriteString("Rule 75/2146 cost=");
         WriteInt(e^.gcg^.cost [ntreg], 1);
-        WriteString(' TestMembershipL -> reg');
+        WriteString(" TestMembershipL -> reg");
         WriteLn;
         WriteNest(nest);
         WriteCard(CARDINAL(e), 1);
@@ -1793,8 +1837,10 @@ BEGIN
       CodeGen.EmitLn;
 
       IF e^.attr^.TestMembershipL.cond THEN
-        CodeGen.EmitString('	setb	');
-        EmitByteRegister( RegAlloc.allocation[ai].reg);
+        CodeGen.EmitTab;
+        CodeGen.EmitString("setb");
+        CodeGen.EmitTab;
+        EmitByteRegister(RegAlloc.allocation[ai].reg);
         CodeGen.EmitLn
       ELSE
         CodeGen.EmitTab;
@@ -1805,20 +1851,21 @@ BEGIN
       END (* IF *)
 
     | 76 :
-      EmitNtreg(e^.son[1],nest+1,AT0 );
-      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+      EmitNtreg(e^.son[1],nest+1,at0 );
+      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
       ai:=ai-1;
       IF RegAlloc.allocation [ai]. num>0 THEN
         PerformActions (ai);
       END; (* IF *)
       IF IR.OptEmitMatch THEN
-        WriteNest (nest);
-        WriteString ('Rule 76/2114 Cost=');
-        WriteInt    (e^.gcg^.cost [ntreg],1);
-        WriteString (' SetCompare ->   reg');
+        WriteNest(nest);
+        WriteString("Rule 76/2114 cost=");
+        WriteInt(e^.gcg^.cost [ntreg],1);
+        WriteString(" SetCompare -> reg");
         WriteLn;
         WriteNest (nest);
-        WriteCard (CARDINAL(e),1); Write(' ');
+        WriteCard (CARDINAL(e),1);
+        Write(" ");
         IF e # NIL THEN
           IR.PrintAttributes(e^.attr^)
         ELSE
@@ -1828,75 +1875,89 @@ BEGIN
         RegAlloc.PrintAllocation (ai);
       END; (* IF *)
 
-      CodeGen.EmitString('	movl	');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("movl");
+      CodeGen.EmitTab;
       EmitRegister(RegAlloc.allocation[ai].op[1]);
-      CodeGen.EmitChar(',');
+      CodeGen.EmitString(", ");
       EmitRegister(RegAlloc.allocation[ai].scr[1]);
       CodeGen.EmitLn;
 
       CASE e^.attr^.SetCompare.rel OF
       | RelLess :
-        CodeGen.EmitString('	or	');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("or");
+        CodeGen.EmitTab;
         EmitAdrMode(at1.RegOrCMemOrIm.am);
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         EmitRegister(RegAlloc.allocation[ai].scr[1]);
         CodeGen.EmitLn;
         e^.attr^.SetCompare.rel := RelUnequal
 
       | RelLessOrEqual :
-        CodeGen.EmitString('	and	');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("and");
+        CodeGen.EmitTab;
         EmitAdrMode(at1.RegOrCMemOrIm.am);
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         EmitRegister(RegAlloc.allocation[ai].scr[1]);
         CodeGen.EmitLn;
         e^.attr^.SetCompare.rel := RelEqual
 
       | RelGreater :
-        CodeGen.EmitString('	and	');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("and");
+        CodeGen.EmitTab;
         EmitAdrMode(at1.RegOrCMemOrIm.am);
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         EmitRegister(RegAlloc.allocation[ai].scr[1]);
         CodeGen.EmitLn;
         e^.attr^.SetCompare.rel := RelUnequal
 
       | RelGreaterOrEqual :
-        CodeGen.EmitString('	or	');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("or");
+        CodeGen.EmitTab;
         EmitAdrMode(at1.RegOrCMemOrIm.am);
-        CodeGen.EmitChar(',');
+        CodeGen.EmitString(", ");
         EmitRegister(RegAlloc.allocation[ai].scr[1]);
         CodeGen.EmitLn;
         e^.attr^.SetCompare.rel := RelEqual
       END; (* CASE *)
 
-      CodeGen.EmitString('	cmpl	');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("cmpl");
+      CodeGen.EmitTab;
       EmitRegister(RegAlloc.allocation[ai].scr[1]);
-      CodeGen.EmitChar(',');
+      CodeGen.EmitString(", ");
       EmitRegister(RegAlloc.allocation[ai].op[1]);
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	set');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("set");
       CodeGen.EmitString(RelationTable[e^.attr^.SetCompare.rel][FALSE]);
       CodeGen.EmitTab;
       EmitByteRegister(RegAlloc.allocation[ai].reg);
       CodeGen.EmitLn
 
     | 77 :
-      EmitNtreg(e^.son[1],nest+1,AT0 );
-      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+      EmitNtreg(e^.son[1],nest+1,at0 );
+      EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
       ai := ai - 1;
       IF RegAlloc.allocation[ai].num > 0 THEN
         PerformActions(ai)
       END; (* IF *)
 
       IF IR.OptEmitMatch THEN
-        WriteNest (nest);
-        WriteString ('Rule 77/2105 Cost=');
-        WriteInt    (e^.gcg^.cost [ntreg],1);
-        WriteString (' SetCompare ->   reg');
+        WriteNest(nest);
+        WriteString("Rule 77/2105 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" SetCompare -> reg");
         WriteLn;
-        WriteNest (nest);
-        WriteCard (CARDINAL(e),1); Write(' ');
-        IF e#NIL THEN
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
+        IF e # NIL THEN
           IR.PrintAttributes(e^.attr^)
         ELSE
           WriteLn
@@ -1905,13 +1966,16 @@ BEGIN
         RegAlloc.PrintAllocation (ai);
       END; (* IF *)
 
-      CodeGen.EmitString('	cmpl	');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("cmpl");
+      CodeGen.EmitTab;
       EmitAdrMode(at1.RegOrCMemOrIm.am);
-      CodeGen.EmitChar(',');
+      CodeGen.EmitString(", ");
       EmitRegister(RegAlloc.allocation[ai].op[1]);
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	set');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("set");
       CodeGen.EmitString(RelationTable[e^.attr^.SetCompare.rel][FALSE]);
       CodeGen.EmitTab;
       EmitByteRegister(RegAlloc.allocation[ai].reg);
@@ -1926,13 +1990,14 @@ BEGIN
       END; (* IF *)
 
       IF IR.OptEmitMatch THEN
-        WriteNest (nest);
-        WriteString ('Rule 78/2087 Cost=');
-        WriteInt    (e^.gcg^.cost [ntreg],1);
-        WriteString (' FloatCompare ->   reg');
+        WriteNest(nest);
+        WriteString("Rule 78/2087 cost=");
+        WriteInt(e^.gcg^.cost[ntreg], 1);
+        WriteString(" FloatCompare -> reg");
         WriteLn;
-        WriteNest (nest);
-        WriteCard (CARDINAL(e),1); Write(' ');
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
         IF e # NIL THEN
           IR.PrintAttributes(e^.attr^)
         ELSE
@@ -1944,24 +2009,32 @@ BEGIN
 
       INC(FStackStart);
       IF FStackTempo[FStackStart] # NoTempo THEN
-        CodeGen.EmitString('	fcompl	');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("fcompl");
+        CodeGen.EmitTab;
         CodeGen.EmitInt(FStackTempo[FStackStart]);
-        CodeGen.EmitString('(%ebp)');
+        CodeGen.EmitString("(%ebp)");
         CodeGen.EmitLn;
         DEC(CurFStackSize)
       ELSE
-        CodeGen.EmitString('	fcompp');
+        CodeGen.EmitTab;
+        CodeGen.EmitString("fcompp");
         CodeGen.EmitLn;
         DEC(CurFStackSize, 2)
       END; (* IF *)
 
-      CodeGen.EmitString('	fstsw	%ax');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fstsw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("%ax");
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	sahf');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("sahf");
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	set');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("set");
       CodeGen.EmitString
         (RelationTable[Reverse[e^.attr^.FloatCompare.rel]]
           [SignedTable[e^.attr^.FloatCompare.mode]]);
@@ -1979,12 +2052,13 @@ BEGIN
 
       IF IR.OptEmitMatch THEN
         WriteNest(nest);
-        WriteString('Rule 79/2075 Cost=');
-        WriteInt(e^.gcg^.cost [ntreg],1);
-        WriteString(' FloatCompare -> reg');
+        WriteString("Rule 79/2075 cost=");
+        WriteInt(e^.gcg^.cost [ntreg], 1);
+        WriteString(" FloatCompare -> reg");
         WriteLn;
-        WriteNest (nest);
-        WriteCard (CARDINAL(e),1); Write(' ');
+        WriteNest(nest);
+        WriteCard(CARDINAL(e), 1);
+        Write(" ");
         IF e # NIL THEN
           IR.PrintAttributes(e^.attr^)
         ELSE
@@ -1994,19 +2068,25 @@ BEGIN
         RegAlloc.PrintAllocation(ai)
       END; (* IF *)
 
-      CodeGen.EmitString('	fcomp');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fcomp");
       EmitSuffix(e^.son[1]^.gcg^.CMem.mode);
       CodeGen.EmitTab;
       EmitMemAdr(at0.CMem.am);
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	fstsw	%ax');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("fstsw");
+      CodeGen.EmitTab;
+      CodeGen.EmitString("%ax");
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	sahf');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("sahf");
       CodeGen.EmitLn;
 
-      CodeGen.EmitString('	set');
+      CodeGen.EmitTab;
+      CodeGen.EmitString("set");
       CodeGen.EmitString
         (RelationTable[Reverse[e^.attr^.FloatCompare.rel]]
           [SignedTable[e^.attr^.FloatCompare.mode]]);
@@ -2019,10 +2099,10 @@ BEGIN
       (* Reformatting done until this point *)
 
    | 80 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
-       IF RegAlloc.allocation [ai]. num>0 THEN
+       IF RegAlloc.allocation[ai]. num>0 THEN
           PerformActions (ai);
        END;
        IF IR.OptEmitMatch THEN
@@ -2038,15 +2118,15 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompare.rel][SignedTable[e^.attr^.FloatCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 	PopFStack;
 
    | 81 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMem(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2064,12 +2144,12 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  EmitAdrMode( at1.RegOrCMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompare.rel]][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 82 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2087,12 +2167,12 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 83 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2110,13 +2190,13 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedCompare.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompare.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedCompare.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	set');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompare.rel][SignedTable[e^.attr^.FixedCompare.mode]]);  CodeGen.EmitTab;  EmitByteRegister ( RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 
    | 84 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
-  EmitNtRegOrCMemOrIm(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
+  EmitNtRegOrCMemOrIm(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2137,11 +2217,11 @@ BEGIN
 	GetLabel(lab);
 	GetLabel(lab2);
 	IF e^.attr^.CheckL.CheckLwb THEN
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.LwbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.LwbMode);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.CheckL.LwbMode]]);  CodeGen.EmitTab;  CodeGen.EmitString( lab2^);  CodeGen.EmitLn;
 	END;
 	IF e^.attr^.CheckL.CheckUpb THEN
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.UpbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitAdrMode( at2.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.CheckL.UpbMode);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLessOrEqual][SignedTable[e^.attr^.CheckL.UpbMode]]);  CodeGen.EmitTab;  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
 	ELSE
  CodeGen.EmitString('	jmp	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
@@ -2151,9 +2231,9 @@ BEGIN
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 85 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
-  EmitNtRegOrCMemOrIm(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
+  EmitNtRegOrCMemOrIm(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2171,15 +2251,15 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrCMemOrIm.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( at2.RegOrCMemOrIm.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	push');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(',(%esp)');  CodeGen.EmitLn;
  CodeGen.EmitString('	addl	$');  CodeGen.EmitInt( 2*SizeTable[e^.son[1]^.gcg^.reg.mode]);  CodeGen.EmitString(',%esp');  CodeGen.EmitLn;
 
    | 86 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
-  EmitNtConstant(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
+  EmitNtConstant(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2203,19 +2283,19 @@ BEGIN
 	| 4:
  CodeGen.EmitString('	.align 4');  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
- CodeGen.EmitString('	.long	');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  CodeGen.EmitInt( e^.son[3]^.gcg^.Constant.val);  CodeGen.EmitLn;
+ CodeGen.EmitString('	.long	');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  CodeGen.EmitInt( e^.son[3]^.gcg^.Constant.val);  CodeGen.EmitLn;
 	| 2:
  CodeGen.EmitString('	.align 2');  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
- CodeGen.EmitString('	.word	');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  CodeGen.EmitInt( e^.son[3]^.gcg^.Constant.val);  CodeGen.EmitLn;
+ CodeGen.EmitString('	.word	');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  CodeGen.EmitInt( e^.son[3]^.gcg^.Constant.val);  CodeGen.EmitLn;
 	END;
  CodeGen.EmitString('	.text');  CodeGen.EmitLn;
- CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
+ CodeGen.EmitString('	bound');  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(", ");  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
 
    | 87 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
-  EmitNtConstant(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
+  EmitNtConstant(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2234,7 +2314,7 @@ BEGIN
        END;
 
    | 88 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2253,7 +2333,7 @@ BEGIN
        END;
 
    | 89 :
-  EmitNtRegOrCMem(e^.son[1],nest+1,AT0 );
+  EmitNtRegOrCMem(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2272,13 +2352,13 @@ BEGIN
        END;
 
 	IF SignedTable[e^.attr^.Coerce.premode] AND SignedTable[e^.attr^.Coerce.postmode] THEN
- CodeGen.EmitString('	movs');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movs');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( at0.RegOrCMem.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
 	ELSE
- CodeGen.EmitString('	movz');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movz');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMem.mode);  EmitSuffix( e^.attr^.Coerce.postmode);  CodeGen.EmitTab;  EmitAdrMode( at0.RegOrCMem.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.Coerce.postmode);  CodeGen.EmitLn;
 	END;
 
    | 90 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2310,7 +2390,7 @@ BEGIN
 	PopFStack;
 
    | 91 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2328,17 +2408,17 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
  GetLabel(lab);
- CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( ORD('a'));  CodeGen.EmitChar(',');  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( ORD('a'));  CodeGen.EmitString(", ");  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	jl	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
- CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( ORD('z'));  CodeGen.EmitChar(',');  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( ORD('z'));  CodeGen.EmitString(", ");  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	jg	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
- CodeGen.EmitString('	subb	$');  CodeGen.EmitInt( ORD('a') - ORD('A'));  CodeGen.EmitChar(',');  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	subb	$');  CodeGen.EmitInt( ORD('a') - ORD('A'));  CodeGen.EmitString(", ");  EmitByteRegister ( RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 92 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
-  EmitNtreg(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
+  EmitNtreg(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2356,21 +2436,21 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
  GetLabel(lab);
- CodeGen.EmitString(' 	sub');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitString(' 	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	sub');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitString(' 	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
  CodeGen.EmitString(' 	jl	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
  CodeGen.EmitString('	incb	%cl');  CodeGen.EmitLn;
  CodeGen.EmitString('	movl	$-1,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	shll	%cl,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	notl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( Regecx,e^.attr^.SetPlusRange.LwbMode);  CodeGen.EmitLn;
  CodeGen.EmitString('	shll	%cl,');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	orl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	orl	');  EmitRegister(RegAlloc.allocation[ai].scr[1]);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 93 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
-  EmitNtConstant(e^.son[3],nest+1,AT2 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
+  EmitNtConstant(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2387,10 +2467,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	orl	$');  CodeGen.EmitInt( PowerTable[e^.son[3]^.gcg^.Constant.val+1]-PowerTable[e^.son[2]^.gcg^.Constant.val]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	orl	$');  CodeGen.EmitInt( PowerTable[e^.son[3]^.gcg^.Constant.val+1]-PowerTable[e^.son[2]^.gcg^.Constant.val]);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 94 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2407,10 +2487,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	btsl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	btsl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 95 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2429,8 +2509,8 @@ BEGIN
        END;
  CodeGen.EmitString(' 	orl	$');  CodeGen.EmitInt( PowerTable[e^.son[2]^.gcg^.Constant.val]);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 96 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2447,10 +2527,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	xorl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	xorl	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 97 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2467,10 +2547,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	xorl	');  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	xorl	');  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 98 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2487,10 +2567,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	andl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	andl	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 99 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2507,10 +2587,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	andl	');  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	andl	');  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 100 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2531,8 +2611,8 @@ BEGIN
  CodeGen.EmitString(' 	andl	$');  CodeGen.EmitInt( INTEGER(BITSET(-1) - BITSET(e^.son[2]^.gcg^.Constant.val)));  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
 
    | 101 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2551,11 +2631,11 @@ BEGIN
        END;
 
  CodeGen.EmitString('	notl	');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
- CodeGen.EmitString(' 	andl	');  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	andl	');  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
 
    | 102 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2572,10 +2652,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	orl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	orl	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 103 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2592,10 +2672,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	orl	');  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	orl	');  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(', ');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 104 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2617,8 +2697,8 @@ BEGIN
  CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 105 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2636,12 +2716,12 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 106 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2663,8 +2743,8 @@ BEGIN
  CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMod.mode);  CodeGen.EmitLn;
 
    | 107 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2683,8 +2763,8 @@ BEGIN
        END;
  CodeGen.EmitString('	and');  EmitSuffix( e^.attr^.FixedMod.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val-1);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMod.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 108 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2706,8 +2786,8 @@ BEGIN
  CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 109 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2725,12 +2805,12 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xor');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitString(", ");  EmitRegister2 ( Regedx,e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	div');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 110 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2752,8 +2832,8 @@ BEGIN
  CodeGen.EmitString('	idiv');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedDiv.mode);  CodeGen.EmitLn;
 
    | 111 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2772,8 +2852,8 @@ BEGIN
        END;
  CodeGen.EmitString('	sar');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2 (e^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 112 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2792,8 +2872,8 @@ BEGIN
        END;
  CodeGen.EmitString('	shr');  EmitSuffix( e^.attr^.FixedDiv.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2 (e^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedDiv.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 113 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2812,8 +2892,8 @@ BEGIN
        END;
 
    | 114 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2832,8 +2912,8 @@ BEGIN
        END;
 
    | 115 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2852,8 +2932,8 @@ BEGIN
        END;
  CodeGen.EmitString('	mul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 116 :
-  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2872,12 +2952,12 @@ BEGIN
        END;
 
 EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[ai].reg);
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 117 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMem(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2894,10 +2974,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  EmitAdrMode( at1.RegOrCMem.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 118 :
-  EmitNtRegOrCMem(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMem(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2914,10 +2994,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT0.RegOrCMem.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  EmitAdrMode( at0.RegOrCMem.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 119 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2934,10 +3014,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 120 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2954,10 +3034,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 121 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2976,8 +3056,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
  CodeGen.EmitString('	shl');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 122 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -2996,8 +3076,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
  CodeGen.EmitString('	shl');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[1]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 123 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3019,8 +3099,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
  CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 124 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3042,8 +3122,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
  CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitLn;
 
    | 125 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3062,8 +3142,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
  CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 126 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3082,8 +3162,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
  CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.FixedMult.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitString(', ');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.attr^.FixedMult.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 127 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3102,8 +3182,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
 
    | 128 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3122,8 +3202,8 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
 
    | 129 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3140,10 +3220,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	sub');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	sub');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 130 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3160,10 +3240,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[2]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 131 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3180,9 +3260,9 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	add');  EmitSuffix( e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[1]^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 132 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3207,7 +3287,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 133 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3246,7 +3326,7 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
        END;
 
    | 135 :
-  EmitNtRegOrCMemOrIm(e,nest+1,AT0 );
+  EmitNtRegOrCMemOrIm(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3264,10 +3344,10 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	mov');  EmitSuffix( e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitTab;  EmitAdrMode( at0.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[ai].reg,e^.gcg^.RegOrCMemOrIm.mode);  CodeGen.EmitLn;
 
    | 136 :
-  EmitNtmem(e,nest+1,AT0 );
+  EmitNtmem(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3285,14 +3365,14 @@ EmitIndex (e^.son[1]^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.son[1]^.gcg^.
           RegAlloc.PrintAllocation (ai);
        END;
 
-	IF (AT0.mem.am.offset = 0) AND
-	   (AT0.mem.am.faktor = 1) AND
-	   (AT0.mem.am.symbol = NullSymb) AND
-	   (((AT0.mem.am.base  = RegAlloc.allocation[ai].reg) AND (AT0.mem.am.index = RegNil)) OR
-	    ((AT0.mem.am.index = RegAlloc.allocation[ai].reg) AND (AT0.mem.am.base  = RegNil))) THEN
+	IF (at0.mem.am.offset = 0) AND
+	   (at0.mem.am.faktor = 1) AND
+	   (at0.mem.am.symbol = NullSymb) AND
+	   (((at0.mem.am.base  = RegAlloc.allocation[ai].reg) AND (at0.mem.am.index = RegNil)) OR
+	    ((at0.mem.am.index = RegAlloc.allocation[ai].reg) AND (at0.mem.am.base  = RegNil))) THEN
 	  (* skip leal (reg),reg *)
 	ELSE
- CodeGen.EmitString('	leal	');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
+ CodeGen.EmitString('	leal	');  EmitMemAdr( at0.mem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].reg);  CodeGen.EmitLn;
 	END;
 
    END;
@@ -3336,14 +3416,14 @@ END EmitNtreg;
 PROCEDURE EmitNtfreg (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
 VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
-    AT2   :  NtAttributes;
+    at0   :  NtAttributes;
+    at1   :  NtAttributes;
+    at2   :  NtAttributes;
 
 BEGIN
    CASE e^.gcg^.rule [ntfreg] OF
    | 137 :
-  EmitNtreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3367,7 +3447,7 @@ BEGIN
  CodeGen.EmitString('	addl	$4,%esp');  CodeGen.EmitLn;
 
    | 138 :
-  EmitNtCMem(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtCMem(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3386,10 +3466,10 @@ BEGIN
        END;
 
 	PushFStack;
- CodeGen.EmitString('	fildl	');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fildl	');  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
 
    | 139 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3413,7 +3493,7 @@ BEGIN
 	PopFStack;
 
    | 140 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3432,7 +3512,7 @@ BEGIN
        END;
  CodeGen.EmitString('	fcos');  CodeGen.EmitLn;
    | 141 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3451,8 +3531,8 @@ BEGIN
        END;
  CodeGen.EmitString('	fsin');  CodeGen.EmitLn;
    | 142 :
-  EmitNtloadln2(e^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT1 );
+  EmitNtloadln2(e^.son[1]^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3487,7 +3567,7 @@ BEGIN
 	PopFStack;
 
    | 143 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3533,7 +3613,7 @@ BEGIN
 	PopFStack;
 
    | 144 :
-  EmitNtfreg(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtfreg(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3552,7 +3632,7 @@ BEGIN
        END;
  CodeGen.EmitString('	fsqrt');  CodeGen.EmitLn;
    | 145 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3580,8 +3660,8 @@ BEGIN
 	PushFStack;
 
    | 146 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3609,9 +3689,9 @@ BEGIN
 	PushFStack;
 
    | 147 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
-  EmitNtCMem(e^.son[3],nest+1,AT2 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
+  EmitNtCMem(e^.son[3],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3632,13 +3712,13 @@ BEGIN
 	GetLabel(lab);
 	GetLabel(lab2);
 	IF e^.attr^.CheckL.CheckLwb THEN
- CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.LwbMode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	jb	');  CodeGen.EmitString( lab2^);  CodeGen.EmitLn;
 	END;
 	IF e^.attr^.CheckL.CheckUpb THEN
- CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitMemAdr( AT2.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcom');  EmitSuffix( e^.attr^.CheckL.UpbMode);  CodeGen.EmitTab;  EmitMemAdr( at2.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	jbe	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
@@ -3650,7 +3730,7 @@ BEGIN
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 148 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3669,7 +3749,7 @@ BEGIN
        END;
 
    | 149 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3698,7 +3778,7 @@ BEGIN
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 150 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3718,14 +3798,14 @@ BEGIN
 
 	GetLabel(lab);
 	PushFStack;
- CodeGen.EmitString('	fildl	');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
- CodeGen.EmitString('	cmpl	$0x7fffffff,');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fildl	');  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpl	$0x7fffffff,');  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	jbe	');  CodeGen.EmitString( lab^);  CodeGen.EmitLn;
  CodeGen.EmitString('	faddl	TwoExp32_');  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 
    | 151 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3744,8 +3824,8 @@ BEGIN
        END;
  CodeGen.EmitString('	fabs ');  CodeGen.EmitLn;
    | 152 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtfstack(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtfstack(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3764,8 +3844,8 @@ BEGIN
        END;
  FloatOperation ('fdivr');
    | 153 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtfstack(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3784,8 +3864,8 @@ BEGIN
        END;
  FloatOperation ('fdiv');
    | 154 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3802,10 +3882,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fdivr');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fdivr');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 155 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3822,10 +3902,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fdiv');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fdiv');  EmitSuffix( e^.attr^.FloatDiv.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 156 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtfstack(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtfstack(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3844,8 +3924,8 @@ BEGIN
        END;
  FloatOperation ('fmul');
    | 157 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtfstack(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3864,8 +3944,8 @@ BEGIN
        END;
  FloatOperation ('fmul');
    | 158 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3882,10 +3962,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 159 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3902,10 +3982,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fmul');  EmitSuffix( e^.attr^.FloatMult.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 160 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtfstack(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtfstack(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3924,8 +4004,8 @@ BEGIN
        END;
  FloatOperation ('fsub');
    | 161 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtfstack(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3944,8 +4024,8 @@ BEGIN
        END;
  FloatOperation ('fsubr');
    | 162 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3962,10 +4042,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fsubr');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fsubr');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 163 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -3982,10 +4062,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fsub');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fsub');  EmitSuffix( e^.attr^.FloatMinus.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 164 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtfstack(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtfstack(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4004,8 +4084,8 @@ BEGIN
        END;
  FloatOperation ('fadd');
    | 165 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtfstack(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4024,8 +4104,8 @@ BEGIN
        END;
  FloatOperation ('fadd');
    | 166 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4042,10 +4122,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 167 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4062,9 +4142,9 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	fadd');  EmitSuffix( e^.attr^.FloatPlus.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
    | 168 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4083,7 +4163,7 @@ BEGIN
        END;
  CodeGen.EmitString('	fchs ');  CodeGen.EmitLn;
    | 169 :
-  EmitNtCMem(e,nest+1,AT0 );
+  EmitNtCMem(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4103,7 +4183,7 @@ BEGIN
 
 	PushFStack;
  CodeGen.EmitString('	fld');  EmitSuffix( e^.gcg^.CMem.mode);
- CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
 
    END;
    IF IR.OptEmitMatch THEN
@@ -4145,12 +4225,12 @@ END EmitNtfreg;
 PROCEDURE EmitNtfstack (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
 VAR
-    AT0   :  NtAttributes;
+    at0   :  NtAttributes;
 
 BEGIN
    CASE e^.gcg^.rule [ntfstack] OF
    | 170 :
-  EmitNtfreg(e,nest+1,AT0 );
+  EmitNtfreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4212,13 +4292,13 @@ END EmitNtfstack;
 PROCEDURE EmitNtConstant (e : IR.Expression; nest : INTEGER
        ; VAR resAttributes : NtAttributes);
 VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
+    at0   :  NtAttributes;
+    at1   :  NtAttributes;
 
 BEGIN
    CASE e^.gcg^.rule [ntConstant] OF
    | 171 :
-  EmitNtFloatConstant(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtFloatConstant(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4237,7 +4317,7 @@ BEGIN
        END;
 
    | 172 :
-  EmitNtFloatConstant(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtFloatConstant(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4256,7 +4336,7 @@ BEGIN
        END;
 
    | 173 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4275,7 +4355,7 @@ BEGIN
        END;
 
    | 174 :
-  EmitNtFloatConstant(e^.son[1],nest+1,AT0 );
+  EmitNtFloatConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4294,8 +4374,8 @@ BEGIN
        END;
 
    | 175 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4314,8 +4394,8 @@ BEGIN
        END;
 
    | 176 :
-  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4334,8 +4414,8 @@ BEGIN
        END;
 
    | 177 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4354,8 +4434,8 @@ BEGIN
        END;
 
    | 178 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4374,8 +4454,8 @@ BEGIN
        END;
 
    | 179 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4394,8 +4474,8 @@ BEGIN
        END;
 
    | 180 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4414,8 +4494,8 @@ BEGIN
        END;
 
    | 181 :
-  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1]^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4434,8 +4514,8 @@ BEGIN
        END;
 
    | 182 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4454,8 +4534,8 @@ BEGIN
        END;
 
    | 183 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4474,7 +4554,7 @@ BEGIN
        END;
 
    | 184 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4493,7 +4573,7 @@ BEGIN
        END;
 
    | 185 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4671,11 +4751,11 @@ END EmitNtConstant;
 PROCEDURE EmitNtFloatConstant
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
+  at0   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntFloatConstant] OF
   | 194 :
-  EmitNtConstant(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtConstant(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4694,7 +4774,7 @@ BEGIN
        END;
 
    | 195 :
-  EmitNtConstant(e^.son[1]^.son[2],nest+1,AT0 );
+  EmitNtConstant(e^.son[1]^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4713,7 +4793,7 @@ BEGIN
        END;
 
    | 196 :
-  EmitNtFloatConstant(e^.son[1],nest+1,AT0 );
+  EmitNtFloatConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4732,7 +4812,7 @@ BEGIN
        END;
 
    | 197 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4751,7 +4831,7 @@ BEGIN
        END;
 
    | 198 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4821,15 +4901,15 @@ END EmitNtFloatConstant;
 PROCEDURE EmitNtSimpleVariable
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
-  AT2   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
+  at2   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntSimpleVariable] OF
   | 201 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4848,9 +4928,9 @@ BEGIN
        END;
 
    | 202 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1]^.son[1],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4869,9 +4949,9 @@ BEGIN
        END;
 
    | 203 :
-  EmitNtSimpleVariable(e^.son[1]^.son[1]^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[1]^.son[2],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1]^.son[1]^.son[1]^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[1]^.son[2],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4890,9 +4970,9 @@ BEGIN
        END;
 
    | 204 :
-  EmitNtConstant(e^.son[1]^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[1]^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2],nest+1,AT2 );
+  EmitNtConstant(e^.son[1]^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[1]^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2],nest+1,at2 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4911,8 +4991,8 @@ BEGIN
        END;
 
    | 205 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4931,8 +5011,8 @@ BEGIN
        END;
 
    | 206 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4951,8 +5031,8 @@ BEGIN
        END;
 
    | 207 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4971,7 +5051,7 @@ BEGIN
        END;
 
    | 208 :
-  EmitNtConstant(e^.son[2],nest+1,AT0 );
+  EmitNtConstant(e^.son[2],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -4990,7 +5070,7 @@ BEGIN
        END;
  SaveDisplay [e^.son[1]^.attr^.FrameBase.level] := TRUE;
    | 209 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5060,12 +5140,12 @@ END EmitNtSimpleVariable;
 PROCEDURE EmitNtSymPlusOffset
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntSymPlusOffset] OF
   | 212 :
-  EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
+  EmitNtSymPlusOffset(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5082,10 +5162,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.SymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
+ resAttributes.SymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
    | 213 :
-  EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5102,10 +5182,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.SymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
+ resAttributes.SymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
    | 214 :
-  EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5122,10 +5202,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.SymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
+ resAttributes.SymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
    | 215 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtSymPlusOffset(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtSymPlusOffset(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5142,7 +5222,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.SymPlusOffset.symbol	:= AT1.SymPlusOffset.symbol;
+ resAttributes.SymPlusOffset.symbol	:= at1.SymPlusOffset.symbol;
    | 216 :
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -5198,7 +5278,7 @@ BEGIN
        END;
  resAttributes.SymPlusOffset.symbol	:= e^.attr^.ProcedureConstant.index^.Entry;
    | 219 :
-  EmitNtConstant(e,nest+1,AT0 );
+  EmitNtConstant(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5232,12 +5312,12 @@ END EmitNtSymPlusOffset;
 PROCEDURE EmitNtRegPlusSymPlusOffset
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes);
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntRegPlusSymPlusOffset] OF
   | 220 :
-  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,AT0 );
+  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5254,11 +5334,11 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.RegPlusSymPlusOffset.base	:= AT0.RegPlusSymPlusOffset.base;
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.RegPlusSymPlusOffset.symbol;
+ resAttributes.RegPlusSymPlusOffset.base	:= at0.RegPlusSymPlusOffset.base;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at0.RegPlusSymPlusOffset.symbol;
    | 221 :
-  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5275,11 +5355,11 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.RegPlusSymPlusOffset.base	:= AT0.RegPlusSymPlusOffset.base;
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.RegPlusSymPlusOffset.symbol;
+ resAttributes.RegPlusSymPlusOffset.base	:= at0.RegPlusSymPlusOffset.base;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at0.RegPlusSymPlusOffset.symbol;
    | 222 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5299,11 +5379,11 @@ BEGIN
 
 	resAttributes.RegPlusSymPlusOffset.base		:= RegAlloc.allocation[ai].op[1];
 	resAttributes.RegPlusSymPlusOffset.symbol	:= NullSymb;
- CodeGen.EmitString('	mov');  EmitSigned( e^.son[1]^.gcg^.reg.mode);  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSigned( e^.son[1]^.gcg^.reg.mode);  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
 
    | 223 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5323,8 +5403,8 @@ BEGIN
  resAttributes.RegPlusSymPlusOffset.base	:= RegAlloc.allocation[ai].op[1];
 	  resAttributes.RegPlusSymPlusOffset.symbol	:= NullSymb;
    | 224 :
-  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5341,11 +5421,11 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.RegPlusSymPlusOffset.base	:= AT0.RegPlusSymPlusOffset.base;
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.RegPlusSymPlusOffset.symbol;
+ resAttributes.RegPlusSymPlusOffset.base	:= at0.RegPlusSymPlusOffset.base;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at0.RegPlusSymPlusOffset.symbol;
    | 225 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtRegPlusSymPlusOffset(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtRegPlusSymPlusOffset(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5362,11 +5442,11 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.RegPlusSymPlusOffset.base	:= AT1.RegPlusSymPlusOffset.base;
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT1.RegPlusSymPlusOffset.symbol;
+ resAttributes.RegPlusSymPlusOffset.base	:= at1.RegPlusSymPlusOffset.base;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at1.RegPlusSymPlusOffset.symbol;
    | 226 :
-  EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5385,12 +5465,12 @@ BEGIN
        END;
 
 	resAttributes.RegPlusSymPlusOffset.base		:= RegAlloc.allocation[ai].op[2];
-	resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
- CodeGen.EmitString('	mov');  EmitSigned( e^.son[2]^.gcg^.reg.mode);  EmitSuffix( e^.son[2]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[2]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
+	resAttributes.RegPlusSymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
+ CodeGen.EmitString('	mov');  EmitSigned( e^.son[2]^.gcg^.reg.mode);  EmitSuffix( e^.son[2]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[2],e^.son[2]^.gcg^.reg.mode);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[2]);  CodeGen.EmitLn;
 
    | 227 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtSymPlusOffset(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtSymPlusOffset(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5409,12 +5489,12 @@ BEGIN
        END;
 
 	resAttributes.RegPlusSymPlusOffset.base		:= RegAlloc.allocation[ai].op[1];
-	resAttributes.RegPlusSymPlusOffset.symbol	:= AT1.SymPlusOffset.symbol;
- CodeGen.EmitString('	mov');  EmitSigned( e^.son[1]^.gcg^.reg.mode);  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+	resAttributes.RegPlusSymPlusOffset.symbol	:= at1.SymPlusOffset.symbol;
+ CodeGen.EmitString('	mov');  EmitSigned( e^.son[1]^.gcg^.reg.mode);  EmitSuffix( e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.son[1]^.gcg^.reg.mode);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
 
    | 228 :
-  EmitNtSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5432,10 +5512,10 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
  resAttributes.RegPlusSymPlusOffset.base	:= RegAlloc.allocation[ai].op[2];
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
    | 229 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtSymPlusOffset(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtSymPlusOffset(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5453,7 +5533,7 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
  resAttributes.RegPlusSymPlusOffset.base	:= RegAlloc.allocation[ai].op[1];
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT1.SymPlusOffset.symbol;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at1.SymPlusOffset.symbol;
    | 230 :
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -5474,7 +5554,7 @@ BEGIN
  resAttributes.RegPlusSymPlusOffset.base	:= Regebp;
 	  resAttributes.RegPlusSymPlusOffset.symbol	:= NullSymb;
    | 231 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5494,10 +5574,10 @@ BEGIN
 
 	resAttributes.RegPlusSymPlusOffset.symbol	:= NullSymb;
 	resAttributes.RegPlusSymPlusOffset.base		:= RegAlloc.allocation[ai].op[1];
- CodeGen.EmitString('	mov');  EmitSigned( e^.gcg^.reg.mode);  EmitSuffix( e^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.gcg^.reg.mode);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSigned( e^.gcg^.reg.mode);  EmitSuffix( e^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.gcg^.reg.mode);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
 
    | 232 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5517,7 +5597,7 @@ BEGIN
  resAttributes.RegPlusSymPlusOffset.symbol	:= NullSymb;
 	  resAttributes.RegPlusSymPlusOffset.base	:= RegAlloc.allocation[ai].op[1];
    | 233 :
-  EmitNtSymPlusOffset(e,nest+1,AT0 );
+  EmitNtSymPlusOffset(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5535,7 +5615,7 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
  resAttributes.RegPlusSymPlusOffset.base	:= RegNil;
-	  resAttributes.RegPlusSymPlusOffset.symbol	:= AT0.SymPlusOffset.symbol;
+	  resAttributes.RegPlusSymPlusOffset.symbol	:= at0.SymPlusOffset.symbol;
    END;
    IF IR.OptEmitMatch THEN
        WriteNest (nest);
@@ -5552,12 +5632,12 @@ END EmitNtRegPlusSymPlusOffset;
 PROCEDURE EmitNtOffsetPlusIndexMultFaktor
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntOffsetPlusIndexMultFaktor] OF
   | 234 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5574,10 +5654,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index	:= AT0.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index	:= at0.OffsetPlusIndexMultFaktor.index;
    | 235 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5594,10 +5674,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index  := AT0.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index  := at0.OffsetPlusIndexMultFaktor.index;
    | 236 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5614,10 +5694,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index  := AT0.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index  := at0.OffsetPlusIndexMultFaktor.index;
    | 237 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5634,10 +5714,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index  := AT1.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index  := at1.OffsetPlusIndexMultFaktor.index;
    | 238 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5654,10 +5734,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index	:= AT0.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index	:= at0.OffsetPlusIndexMultFaktor.index;
    | 239 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5674,10 +5754,10 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index	:= AT0.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index	:= at0.OffsetPlusIndexMultFaktor.index;
    | 240 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5694,9 +5774,9 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.OffsetPlusIndexMultFaktor.index	:= AT1.OffsetPlusIndexMultFaktor.index;
+ resAttributes.OffsetPlusIndexMultFaktor.index	:= at1.OffsetPlusIndexMultFaktor.index;
    | 241 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5715,10 +5795,10 @@ BEGIN
        END;
 
 	resAttributes.OffsetPlusIndexMultFaktor.index		:= RegAlloc.allocation[ai].op[1];
- CodeGen.EmitString('	mov');  EmitSigned( e^.gcg^.reg.mode);  EmitSuffix( e^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.gcg^.reg.mode);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSigned( e^.gcg^.reg.mode);  EmitSuffix( e^.gcg^.reg.mode);  CodeGen.EmitString('l	');  EmitRegister2 ( RegAlloc.allocation[ai].op[1],e^.gcg^.reg.mode);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[ai].op[1]);  CodeGen.EmitLn;
 
    | 242 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5752,12 +5832,12 @@ END EmitNtOffsetPlusIndexMultFaktor;
 PROCEDURE EmitNtmem
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
 BEGIN
    CASE e^.gcg^.rule [ntmem] OF
    | 243 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5774,14 +5854,14 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.mem.am.offset	:= AT0.mem.am.offset;
-	  resAttributes.mem.am.faktor	:= AT0.mem.am.faktor;
-	  resAttributes.mem.am.base	:= AT0.mem.am.base;
-	  resAttributes.mem.am.index	:= AT0.mem.am.index;
-	  resAttributes.mem.am.symbol	:= AT0.mem.am.symbol;
+ resAttributes.mem.am.offset	:= at0.mem.am.offset;
+	  resAttributes.mem.am.faktor	:= at0.mem.am.faktor;
+	  resAttributes.mem.am.base	:= at0.mem.am.base;
+	  resAttributes.mem.am.index	:= at0.mem.am.index;
+	  resAttributes.mem.am.symbol	:= at0.mem.am.symbol;
    | 244 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5807,8 +5887,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 245 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5834,8 +5914,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 246 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5861,8 +5941,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 247 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5888,8 +5968,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 248 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5915,8 +5995,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 249 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5942,8 +6022,8 @@ BEGIN
 	  resAttributes.mem.am.symbol := NullSymb;
 
    | 250 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5962,12 +6042,12 @@ BEGIN
        END;
  resAttributes.mem.am.faktor := e^.son[1]^.gcg^.OffsetPlusIndexMultFaktor.faktor * e^.son[2]^.gcg^.Constant.val - 1;
 	  resAttributes.mem.am.offset := e^.son[1]^.gcg^.OffsetPlusIndexMultFaktor.offset * e^.son[2]^.gcg^.Constant.val;
-	  resAttributes.mem.am.index  := AT0.OffsetPlusIndexMultFaktor.index;
-	  resAttributes.mem.am.base   := AT0.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.index  := at0.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.base   := at0.OffsetPlusIndexMultFaktor.index;
 	  resAttributes.mem.am.symbol := NullSymb;
    | 251 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -5986,12 +6066,12 @@ BEGIN
        END;
  resAttributes.mem.am.faktor := e^.son[2]^.gcg^.OffsetPlusIndexMultFaktor.faktor * e^.son[1]^.gcg^.Constant.val - 1;
 	  resAttributes.mem.am.offset := e^.son[2]^.gcg^.OffsetPlusIndexMultFaktor.offset * e^.son[1]^.gcg^.Constant.val;
-	  resAttributes.mem.am.index  := AT1.OffsetPlusIndexMultFaktor.index;
-	  resAttributes.mem.am.base   := AT1.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.index  := at1.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.base   := at1.OffsetPlusIndexMultFaktor.index;
 	  resAttributes.mem.am.symbol := NullSymb;
    | 252 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6008,14 +6088,14 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.mem.am.offset	:= AT0.mem.am.offset - e^.son[2]^.gcg^.Constant.val;
-	  resAttributes.mem.am.faktor	:= AT0.mem.am.faktor;
-	  resAttributes.mem.am.base	:= AT0.mem.am.base;
-	  resAttributes.mem.am.index	:= AT0.mem.am.index;
-	  resAttributes.mem.am.symbol	:= AT0.mem.am.symbol;
+ resAttributes.mem.am.offset	:= at0.mem.am.offset - e^.son[2]^.gcg^.Constant.val;
+	  resAttributes.mem.am.faktor	:= at0.mem.am.faktor;
+	  resAttributes.mem.am.base	:= at0.mem.am.base;
+	  resAttributes.mem.am.index	:= at0.mem.am.index;
+	  resAttributes.mem.am.symbol	:= at0.mem.am.symbol;
    | 253 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6032,14 +6112,14 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.mem.am.offset	:= AT0.mem.am.offset + e^.son[2]^.gcg^.Constant.val;
-	  resAttributes.mem.am.faktor	:= AT0.mem.am.faktor;
-	  resAttributes.mem.am.base	:= AT0.mem.am.base;
-	  resAttributes.mem.am.index	:= AT0.mem.am.index;
-	  resAttributes.mem.am.symbol	:= AT0.mem.am.symbol;
+ resAttributes.mem.am.offset	:= at0.mem.am.offset + e^.son[2]^.gcg^.Constant.val;
+	  resAttributes.mem.am.faktor	:= at0.mem.am.faktor;
+	  resAttributes.mem.am.base	:= at0.mem.am.base;
+	  resAttributes.mem.am.index	:= at0.mem.am.index;
+	  resAttributes.mem.am.symbol	:= at0.mem.am.symbol;
    | 254 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtmem(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtmem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6056,14 +6136,14 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.mem.am.offset	:= AT1.mem.am.offset + e^.son[1]^.gcg^.Constant.val;
-	  resAttributes.mem.am.faktor	:= AT1.mem.am.faktor;
-	  resAttributes.mem.am.base	:= AT1.mem.am.base;
-	  resAttributes.mem.am.index	:= AT1.mem.am.index;
-	  resAttributes.mem.am.symbol	:= AT1.mem.am.symbol;
+ resAttributes.mem.am.offset	:= at1.mem.am.offset + e^.son[1]^.gcg^.Constant.val;
+	  resAttributes.mem.am.faktor	:= at1.mem.am.faktor;
+	  resAttributes.mem.am.base	:= at1.mem.am.base;
+	  resAttributes.mem.am.index	:= at1.mem.am.index;
+	  resAttributes.mem.am.symbol	:= at1.mem.am.symbol;
    | 255 :
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,AT0 );
-  EmitNtRegPlusSymPlusOffset(e^.son[2],nest+1,AT1 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[1],nest+1,at0 );
+  EmitNtRegPlusSymPlusOffset(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6082,12 +6162,12 @@ BEGIN
        END;
  resAttributes.mem.am.offset	:= e^.son[1]^.gcg^.OffsetPlusIndexMultFaktor.offset + e^.son[2]^.gcg^.RegPlusSymPlusOffset.offset;
 	  resAttributes.mem.am.faktor	:= e^.son[1]^.gcg^.OffsetPlusIndexMultFaktor.faktor;
-	  resAttributes.mem.am.base	:= AT1.RegPlusSymPlusOffset.base;
-	  resAttributes.mem.am.index	:= AT0.OffsetPlusIndexMultFaktor.index;
-	  resAttributes.mem.am.symbol	:= AT1.RegPlusSymPlusOffset.symbol;
+	  resAttributes.mem.am.base	:= at1.RegPlusSymPlusOffset.base;
+	  resAttributes.mem.am.index	:= at0.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.symbol	:= at1.RegPlusSymPlusOffset.symbol;
    | 256 :
-  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,AT0 );
-  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,AT1 );
+  EmitNtRegPlusSymPlusOffset(e^.son[1],nest+1,at0 );
+  EmitNtOffsetPlusIndexMultFaktor(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6106,11 +6186,11 @@ BEGIN
        END;
  resAttributes.mem.am.offset	:= e^.son[2]^.gcg^.OffsetPlusIndexMultFaktor.offset + e^.son[1]^.gcg^.RegPlusSymPlusOffset.offset;
 	  resAttributes.mem.am.faktor	:= e^.son[2]^.gcg^.OffsetPlusIndexMultFaktor.faktor;
-	  resAttributes.mem.am.base	:= AT0.RegPlusSymPlusOffset.base;
-	  resAttributes.mem.am.index	:= AT1.OffsetPlusIndexMultFaktor.index;
-	  resAttributes.mem.am.symbol	:= AT0.RegPlusSymPlusOffset.symbol;
+	  resAttributes.mem.am.base	:= at0.RegPlusSymPlusOffset.base;
+	  resAttributes.mem.am.index	:= at1.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.symbol	:= at0.RegPlusSymPlusOffset.symbol;
    | 257 :
-  EmitNtOffsetPlusIndexMultFaktor(e,nest+1,AT0 );
+  EmitNtOffsetPlusIndexMultFaktor(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6130,10 +6210,10 @@ BEGIN
  resAttributes.mem.am.offset	:= e^.gcg^.OffsetPlusIndexMultFaktor.offset;
 	  resAttributes.mem.am.faktor	:= e^.gcg^.OffsetPlusIndexMultFaktor.faktor;
 	  resAttributes.mem.am.base	:= RegNil;
-	  resAttributes.mem.am.index	:= AT0.OffsetPlusIndexMultFaktor.index;
+	  resAttributes.mem.am.index	:= at0.OffsetPlusIndexMultFaktor.index;
 	  resAttributes.mem.am.symbol	:= NullSymb;
    | 258 :
-  EmitNtRegPlusSymPlusOffset(e,nest+1,AT0 );
+  EmitNtRegPlusSymPlusOffset(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6152,9 +6232,9 @@ BEGIN
        END;
  resAttributes.mem.am.offset	:= e^.gcg^.RegPlusSymPlusOffset.offset;
 	  resAttributes.mem.am.faktor	:= 1;
-	  resAttributes.mem.am.base	:= AT0.RegPlusSymPlusOffset.base;
+	  resAttributes.mem.am.base	:= at0.RegPlusSymPlusOffset.base;
 	  resAttributes.mem.am.index	:= RegNil;
-	  resAttributes.mem.am.symbol	:= AT0.RegPlusSymPlusOffset.symbol;
+	  resAttributes.mem.am.symbol	:= at0.RegPlusSymPlusOffset.symbol;
    END;
    IF IR.OptEmitMatch THEN
        WriteNest (nest);
@@ -6171,11 +6251,11 @@ END EmitNtmem;
 PROCEDURE EmitNtCMem
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
+  at0   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntCMem] OF
   | 259 :
-  EmitNtRegOrIm(e^.son[1],nest+1,AT0 );
+  EmitNtRegOrIm(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6200,11 +6280,11 @@ BEGIN
 	resAttributes.CMem.am.index	:= RegNil;
 	resAttributes.CMem.am.symbol	:= NullSymb;
  CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Coerce.premode);
- CodeGen.EmitTab;  EmitAdrMode( AT0.RegOrIm.am); CodeGen.EmitChar(',');
+ CodeGen.EmitTab;  EmitAdrMode( at0.RegOrIm.am); CodeGen.EmitString(", ");
  EmitMemAdr( resAttributes.CMem.am);  CodeGen.EmitLn;
 
    | 260 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6233,7 +6313,7 @@ BEGIN
 	PopFStack;
 
    | 261 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6250,13 +6330,13 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.CMem.am.offset	:= AT0.CMem.am.offset;
-	  resAttributes.CMem.am.faktor	:= AT0.CMem.am.faktor;
-	  resAttributes.CMem.am.base	:= AT0.CMem.am.base;
-	  resAttributes.CMem.am.index	:= AT0.CMem.am.index;
-	  resAttributes.CMem.am.symbol	:= AT0.CMem.am.symbol;
+ resAttributes.CMem.am.offset	:= at0.CMem.am.offset;
+	  resAttributes.CMem.am.faktor	:= at0.CMem.am.faktor;
+	  resAttributes.CMem.am.base	:= at0.CMem.am.base;
+	  resAttributes.CMem.am.index	:= at0.CMem.am.index;
+	  resAttributes.CMem.am.symbol	:= at0.CMem.am.symbol;
    | 262 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6273,7 +6353,7 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.CMem.am	 := AT0.mem.am;
+ resAttributes.CMem.am	 := at0.mem.am;
    | 263 :
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
@@ -6298,7 +6378,7 @@ BEGIN
 	  resAttributes.CMem.am.symbol	:= DisplaySym;
 	  SaveDisplay [e^.attr^.FrameBase.level] := TRUE;
    | 264 :
-  EmitNtFloatConstant(e,nest+1,AT0 );
+  EmitNtFloatConstant(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6327,11 +6407,11 @@ BEGIN
  CodeGen.EmitString('	.data');  CodeGen.EmitLn;
  CodeGen.EmitString('	.align 4');  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
- CodeGen.EmitString('	.long	');  CodeGen.EmitInt( tr2.c2);  CodeGen.EmitChar(',');  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitString('		# ');  CodeGen.EmitString( str);  CodeGen.EmitLn;
+ CodeGen.EmitString('	.long	');  CodeGen.EmitInt( tr2.c2);  CodeGen.EmitString(", ");  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitString('		# ');  CodeGen.EmitString( str);  CodeGen.EmitLn;
  CodeGen.EmitString('	.text');  CodeGen.EmitLn;
 
    | 265 :
-  EmitNtFloatConstant(e,nest+1,AT0 );
+  EmitNtFloatConstant(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6379,11 +6459,11 @@ END EmitNtCMem;
 PROCEDURE EmitNtRegOrIm
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
+  at0   :  NtAttributes;
 BEGIN
    CASE e^.gcg^.rule [ntRegOrIm] OF
    | 266 :
-  EmitNtConstant(e,nest+1,AT0 );
+  EmitNtConstant(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6404,7 +6484,7 @@ BEGIN
 	  resAttributes.RegOrIm.am.mode  := e^.gcg^.Constant.mode;
 	  resAttributes.RegOrIm.am.constant := e^.gcg^.Constant.val;
    | 267 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6440,11 +6520,11 @@ END EmitNtRegOrIm;
 PROCEDURE EmitNtRegOrCMem
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
+  at0   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntRegOrCMem] OF
   | 268 :
-  EmitNtCMem(e,nest+1,AT0 );
+  EmitNtCMem(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6463,9 +6543,9 @@ BEGIN
        END;
  resAttributes.RegOrCMem.am.kind := Mmem;
 	  resAttributes.RegOrCMem.am.mode := e^.gcg^.CMem.mode;
-	  resAttributes.RegOrCMem.am.mem  := AT0.CMem.am;
+	  resAttributes.RegOrCMem.am.mem  := at0.CMem.am;
    | 269 :
-  EmitNtreg(e,nest+1,AT0 );
+  EmitNtreg(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6501,11 +6581,11 @@ END EmitNtRegOrCMem;
 PROCEDURE EmitNtRegOrCMemOrIm
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
+  at0   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntRegOrCMemOrIm] OF
   | 270 :
-  EmitNtConstant(e,nest+1,AT0 );
+  EmitNtConstant(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6526,7 +6606,7 @@ BEGIN
 	  resAttributes.RegOrCMemOrIm.am.mode  := e^.gcg^.Constant.mode;
 	  resAttributes.RegOrCMemOrIm.am.constant := e^.gcg^.Constant.val;
    | 271 :
-  EmitNtRegOrCMem(e,nest+1,AT0 );
+  EmitNtRegOrCMem(e,nest+1,at0 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6543,11 +6623,11 @@ BEGIN
           WriteNest (nest);
           RegAlloc.PrintAllocation (ai);
        END;
- resAttributes.RegOrCMemOrIm.am.kind := AT0.RegOrCMem.am.kind;
+ resAttributes.RegOrCMemOrIm.am.kind := at0.RegOrCMem.am.kind;
 	  resAttributes.RegOrCMemOrIm.am.mode := e^.gcg^.RegOrCMem.mode;
-	  IF AT0.RegOrCMem.am.kind = Mreg
-	    THEN resAttributes.RegOrCMemOrIm.am.reg := AT0.RegOrCMem.am.reg;
-	    ELSE resAttributes.RegOrCMemOrIm.am.mem := AT0.RegOrCMem.am.mem;
+	  IF at0.RegOrCMem.am.kind = Mreg
+	    THEN resAttributes.RegOrCMemOrIm.am.reg := at0.RegOrCMem.am.reg;
+	    ELSE resAttributes.RegOrCMemOrIm.am.mem := at0.RegOrCMem.am.mem;
 	  END;
    END;
    IF IR.OptEmitMatch THEN
@@ -6565,13 +6645,13 @@ END EmitNtRegOrCMemOrIm;
 PROCEDURE EmitNtarglist
   ( e : IR.Expression; nest : INTEGER; VAR resAttributes : NtAttributes );
 VAR
-  AT0   :  NtAttributes;
-  AT1   :  NtAttributes;
+  at0   :  NtAttributes;
+  at1   :  NtAttributes;
 BEGIN
   CASE e^.gcg^.rule [ntarglist] OF
   | 272 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6597,8 +6677,8 @@ BEGIN
  CodeGen.EmitString('	movsl');  CodeGen.EmitLn;
 
    | 273 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtmem(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtmem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6619,11 +6699,11 @@ BEGIN
 	IF e^.attr^.PassLong.space > 4 THEN
  CodeGen.EmitString('	subl	$');  CodeGen.EmitInt( e^.attr^.PassLong.space - 4);  CodeGen.EmitString(',%esp');  CodeGen.EmitLn;
 	END;
- CodeGen.EmitString('	pushl	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	pushl	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitLn;
 
    | 274 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6646,8 +6726,8 @@ BEGIN
 	PopFStack;
 
    | 275 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6665,14 +6745,14 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
-	INC (AT1.CMem.am.offset, 4);
- CodeGen.EmitString('	pushl	');  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
-	DEC (AT1.CMem.am.offset, 4);
- CodeGen.EmitString('	pushl	');  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+	INC (at1.CMem.am.offset, 4);
+ CodeGen.EmitString('	pushl	');  EmitMemAdr( at1.CMem.am);  CodeGen.EmitLn;
+	DEC (at1.CMem.am.offset, 4);
+ CodeGen.EmitString('	pushl	');  EmitMemAdr( at1.CMem.am);  CodeGen.EmitLn;
 
    | 276 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6693,8 +6773,8 @@ BEGIN
  CodeGen.EmitString('	pushl	$');  CodeGen.EmitInt( e^.son[2]^.gcg^.Constant.val);  CodeGen.EmitLn;
 
    | 277 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
        ai:=ai-1;
        IF RegAlloc.allocation [ai]. num>0 THEN
           PerformActions (ai);
@@ -6712,7 +6792,7 @@ BEGIN
           RegAlloc.PrintAllocation (ai);
        END;
 
- CodeGen.EmitString('	pushl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	pushl	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitLn;
 
    | 278 :
        ai:=ai-1;
@@ -6787,9 +6867,9 @@ END EmitNtloadln2;
 PROCEDURE EmitStatement ( e : IR.Expression );
 CONST nest = 0;
 VAR
-    AT0   :  NtAttributes;
-    AT1   :  NtAttributes;
-    AT2   :  NtAttributes;
+    at0   :  NtAttributes;
+    at1   :  NtAttributes;
+    at2   :  NtAttributes;
 
 VAR   i        : INTEGER;
 BEGIN
@@ -6805,8 +6885,8 @@ BEGIN
    ELSE
      CASE e^.gcg^.stmtrule OF
      | 1 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6822,10 +6902,10 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
  CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);
- CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 2 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6841,12 +6921,12 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
- CodeGen.EmitString('	fstp');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fstp');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 	PopFStack;
 
      | 3 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtFloatConstant(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtFloatConstant(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6863,11 +6943,11 @@ BEGIN
     END;
 
 	tr1.r := e^.son[2]^.gcg^.FloatConstant.val;
- CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr1.c);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr1.c);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 
      | 4 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtFloatConstant(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtFloatConstant(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6884,13 +6964,13 @@ BEGIN
     END;
 
 	tr2.r := e^.son[2]^.gcg^.FloatConstant.val;
- CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c2);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
-	INC (AT0.mem.am.offset, 4);
- CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitTab;  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c2);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
+	INC (at0.mem.am.offset, 4);
+ CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( tr2.c1);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitTab;  CodeGen.EmitLn;
 
      | 5 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6906,12 +6986,12 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
- CodeGen.EmitString('	movl	');  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitMemAdr( at1.CMem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 
      | 6 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6927,16 +7007,16 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
- CodeGen.EmitString('	movl	');  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
-	INC (AT0.mem.am.offset, 4);
-	INC (AT1.CMem.am.offset, 4);
- CodeGen.EmitString('	movl	');  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitMemAdr( at1.CMem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
+	INC (at0.mem.am.offset, 4);
+	INC (at1.CMem.am.offset, 4);
+ CodeGen.EmitString('	movl	');  EmitMemAdr( at1.CMem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 
      | 7 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,AT1 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6953,8 +7033,8 @@ BEGIN
     END;
 
      | 8 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtmem(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtmem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -6970,19 +7050,19 @@ BEGIN
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
 
- CodeGen.EmitString('	leal	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitString(',%esi');  CodeGen.EmitLn;
- CodeGen.EmitString('	leal	');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitString(',%edi');  CodeGen.EmitLn;
-	IF AT0.mem.am.offset MOD 4 >= 1 THEN
-	  DEC (e^.attr^.AssignLong.size, 4-(AT0.mem.am.offset MOD 4));
+ CodeGen.EmitString('	leal	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitString(',%esi');  CodeGen.EmitLn;
+ CodeGen.EmitString('	leal	');  EmitMemAdr( at0.mem.am);  CodeGen.EmitString(',%edi');  CodeGen.EmitLn;
+	IF at0.mem.am.offset MOD 4 >= 1 THEN
+	  DEC (e^.attr^.AssignLong.size, 4-(at0.mem.am.offset MOD 4));
 	END;
 	IF e^.attr^.AssignLong.size >= 4 THEN
  CodeGen.EmitString('	movl	$');  CodeGen.EmitInt( e^.attr^.AssignLong.size DIV 4);  CodeGen.EmitString(',%ecx');  CodeGen.EmitLn;
 	END;
  CodeGen.EmitString('	cld');  CodeGen.EmitLn;
-	IF AT0.mem.am.offset MOD 2 = 1 THEN
+	IF at0.mem.am.offset MOD 2 = 1 THEN
  CodeGen.EmitString('	movsb');  CodeGen.EmitLn;
 	END;
-	IF (AT0.mem.am.offset MOD 4 = 1) OR (AT0.mem.am.offset MOD 4 = 2) THEN
+	IF (at0.mem.am.offset MOD 4 = 1) OR (at0.mem.am.offset MOD 4 = 2) THEN
  CodeGen.EmitString('	movsw');  CodeGen.EmitLn;
 	END;
 	IF e^.attr^.AssignLong.size >= 8 THEN
@@ -6999,8 +7079,8 @@ BEGIN
 	END;
 
      | 9 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtmem(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtmem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7017,32 +7097,32 @@ BEGIN
     END;
 
 	IF e^.attr^.AssignLong.size >= 4 THEN
- CodeGen.EmitString('	movl	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
-	INC (AT1.mem.am.offset, 4);
-	INC (AT0.mem.am.offset, 4);
+ CodeGen.EmitString('	movl	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
+	INC (at1.mem.am.offset, 4);
+	INC (at0.mem.am.offset, 4);
 	DEC (e^.attr^.AssignLong.size, 4);
 	END;
 	IF e^.attr^.AssignLong.size >= 4 THEN
- CodeGen.EmitString('	movl	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
-	INC (AT1.mem.am.offset, 4);
-	INC (AT0.mem.am.offset, 4);
+ CodeGen.EmitString('	movl	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
+	INC (at1.mem.am.offset, 4);
+	INC (at0.mem.am.offset, 4);
 	DEC (e^.attr^.AssignLong.size, 4);
 	END;
 	IF e^.attr^.AssignLong.size DIV 2 > 0 THEN
- CodeGen.EmitString('	movw	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitChar(',');  EmitWordRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movw	');  EmitWordRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
-	INC (AT1.mem.am.offset, 2);
-	INC (AT0.mem.am.offset, 2);
+ CodeGen.EmitString('	movw	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitString(", ");  EmitWordRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movw	');  EmitWordRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
+	INC (at1.mem.am.offset, 2);
+	INC (at0.mem.am.offset, 2);
 	END;
 	IF e^.attr^.AssignLong.size MOD 2 > 0 THEN
- CodeGen.EmitString('	movb	');  EmitMemAdr( AT1.mem.am);  CodeGen.EmitChar(',');  EmitByteRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
- CodeGen.EmitString('	movb	');  EmitByteRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movb	');  EmitMemAdr( at1.mem.am);  CodeGen.EmitString(", ");  EmitByteRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movb	');  EmitByteRegister ( RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 	END;
 
      | 10 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7057,9 +7137,9 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Inc1.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Inc1.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 11 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7074,10 +7154,10 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Dec1.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Dec1.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 12 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7092,10 +7172,10 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Inc2.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Inc2.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 13 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7110,10 +7190,10 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Dec2.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Dec2.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 14 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7128,10 +7208,10 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	btsl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	btsl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 15 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7146,9 +7226,9 @@ BEGIN
        WriteNest (nest);
        RegAlloc.PrintAllocation (1); WriteLn;
     END;
- CodeGen.EmitString('	btrl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
+ CodeGen.EmitString('	btrl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.mem.am);  CodeGen.EmitChar(' ');  CodeGen.EmitLn;
      | 16 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7165,7 +7245,7 @@ BEGIN
     END;
 
      | 17 :
-  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,AT0 );
+  EmitNtRegOrCMemOrIm(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7182,9 +7262,9 @@ BEGIN
     END;
 
      | 18 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7204,9 +7284,9 @@ BEGIN
  CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 19 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7226,9 +7306,9 @@ BEGIN
  CodeGen.EmitString('	inc');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 20 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7245,12 +7325,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 21 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7267,12 +7347,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	add');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( at2.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 22 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7292,9 +7372,9 @@ BEGIN
  CodeGen.EmitString('	shl');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$1, ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 23 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7314,9 +7394,9 @@ BEGIN
  CodeGen.EmitString('	dec');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 24 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7333,12 +7413,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitAdrMode( at2.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 25 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7355,9 +7435,9 @@ BEGIN
     END;
 
      | 26 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7374,9 +7454,9 @@ BEGIN
     END;
 
      | 27 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtConstant(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtConstant(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7396,9 +7476,9 @@ BEGIN
  CodeGen.EmitString('	shl');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[2]^.son[1]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 28 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7418,9 +7498,9 @@ BEGIN
  CodeGen.EmitString('	shl');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[2]^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 29 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7437,14 +7517,14 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
- CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	imul');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	mov');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitTab;  EmitRegister2 ( RegAlloc.allocation[1].scr[2],e^.attr^.Assign.mode);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 30 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7464,9 +7544,9 @@ BEGIN
  CodeGen.EmitString('	shr');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[2]^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 31 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7486,9 +7566,9 @@ BEGIN
  CodeGen.EmitString('	sar');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( Log2(e^.son[2]^.son[2]^.gcg^.Constant.val));  CodeGen.EmitString(', ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 32 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7508,9 +7588,9 @@ BEGIN
  CodeGen.EmitString('	and');  EmitSuffix( e^.attr^.Assign.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[2]^.son[2]^.gcg^.Constant.val-1);  CodeGen.EmitString(', ');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 33 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7527,12 +7607,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	orl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	orl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 34 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7549,12 +7629,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	orl	');  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	orl	');  EmitAdrMode( at2.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 35 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtreg(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtreg(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7572,12 +7652,12 @@ BEGIN
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
  CodeGen.EmitString('	notl	');  EmitRegister(RegAlloc.allocation[1].op[3]);  CodeGen.EmitLn;
- CodeGen.EmitString(' 	andl	');  EmitRegister(RegAlloc.allocation[1].op[3]);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	andl	');  EmitRegister(RegAlloc.allocation[1].op[3]);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 36 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtConstant(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtConstant(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7594,12 +7674,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString(' 	andl	$');  CodeGen.EmitInt( INTEGER(BITSET(-1) - BITSET(e^.son[2]^.son[2]^.gcg^.Constant.val)));  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString(' 	andl	$');  CodeGen.EmitInt( INTEGER(BITSET(-1) - BITSET(e^.son[2]^.son[2]^.gcg^.Constant.val)));  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 37 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7616,12 +7696,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	andl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	andl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 38 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7638,12 +7718,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	andl	');  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	andl	');  EmitAdrMode( at2.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 39 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,AT1 );
-  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2]^.son[1],nest+1,at1 );
+  EmitNtSimpleVariable(e^.son[2]^.son[2]^.son[1],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7660,12 +7740,12 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	xorl	');  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xorl	');  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 40 :
-  EmitNtSimpleVariable(e^.son[1],nest+1,AT0 );
-  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,AT1 );
-  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,AT2 );
+  EmitNtSimpleVariable(e^.son[1],nest+1,at0 );
+  EmitNtSimpleVariable(e^.son[2]^.son[1]^.son[1],nest+1,at1 );
+  EmitNtRegOrIm(e^.son[2]^.son[2],nest+1,at2 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7682,11 +7762,11 @@ BEGIN
     END;
 
 	EmitIndex (e^.son[1]^.gcg^.SimpleVariable.base, e^.son[1]^.gcg^.SimpleVariable.index, RegAlloc.allocation[1].scr[1]);
- CodeGen.EmitString('	xorl	');  EmitAdrMode( AT2.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
+ CodeGen.EmitString('	xorl	');  EmitAdrMode( at2.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( e^.son[1]^.gcg^.SimpleVariable.base);  CodeGen.EmitLn;
 
      | 41 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2]^.son[1],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2]^.son[1],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7710,7 +7790,7 @@ BEGIN
  CodeGen.EmitString('	fsubl	TwoExp32_');  CodeGen.EmitLn;
  CodeGen.EmitString( lab^);  CodeGen.EmitChar(':');  CodeGen.EmitLn;
 	CheckRoundMode2 (RndZero, RndNegInf);
- CodeGen.EmitString('	fistpl	');  EmitMemAdr( AT0.mem.am );  CodeGen.EmitLn;
+ CodeGen.EmitString('	fistpl	');  EmitMemAdr( at0.mem.am );  CodeGen.EmitLn;
 	PopFStack;
 
      | 42 :
@@ -7752,7 +7832,7 @@ BEGIN
  CodeGen.EmitString('	jmp	');  CodeGen.EmitString( e^.attr^.Goto.tar^);  CodeGen.EmitLn;
 
      | 44 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7778,14 +7858,14 @@ BEGIN
 	END;
  CodeGen.EmitString('	.text');  CodeGen.EmitLn;
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.lwb);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	sub');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.lwb);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelLess][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.upb - e^.attr^.SwitchL.lwb);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.SwitchL.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.attr^.SwitchL.upb - e^.attr^.SwitchL.lwb);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.SwitchL.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[RelGreater][SignedTable[e^.attr^.SwitchL.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SwitchL.DefaultLabel^);  CodeGen.EmitLn;
  CodeGen.EmitString('	jmp	*');  CodeGen.EmitString( lab^);  CodeGen.EmitString('(,');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitString(',4)');  CodeGen.EmitLn;
 
      | 45 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7803,11 +7883,11 @@ BEGIN
 
 	IF e^.attr^.TestAndBranch.cond THEN k:=1 ELSE k:=0 END;
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( k);  CodeGen.EmitChar(',');  EmitByteRegister ( RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( k);  CodeGen.EmitString(", ");  EmitByteRegister ( RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	je	');  CodeGen.EmitString( e^.attr^.TestAndBranch.tar^);  CodeGen.EmitLn;
 
      | 46 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7825,12 +7905,12 @@ BEGIN
 
 	IF e^.attr^.TestAndBranch.cond THEN k:=1 ELSE k:=0 END;
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( k);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpb	$');  CodeGen.EmitInt( k);  CodeGen.EmitString(", ");  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	je	');  CodeGen.EmitString( e^.attr^.TestAndBranch.tar^);  CodeGen.EmitLn;
 
      | 47 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7847,12 +7927,12 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister2 ( RegAlloc.allocation[1].op[1],e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 48 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtRegOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7869,12 +7949,12 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( AT1.RegOrIm.am);  CodeGen.EmitChar(',');  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitTab;  EmitAdrMode( at1.RegOrIm.am);  CodeGen.EmitString(", ");  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FixedCompareAndBranch.rel][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 49 :
-  EmitNtConstant(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMem(e^.son[2],nest+1,AT1 );
+  EmitNtConstant(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7891,12 +7971,12 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmp');  EmitSuffix( e^.attr^.FixedCompareAndBranch.mode);  CodeGen.EmitString('	$');  CodeGen.EmitInt( e^.son[1]^.gcg^.Constant.val);  CodeGen.EmitString(", ");  EmitAdrMode( at1.RegOrCMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FixedCompareAndBranch.rel]][SignedTable[e^.attr^.FixedCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FixedCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 50 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
-  EmitNtCMem(e^.son[2],nest+1,AT1 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
+  EmitNtCMem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7913,15 +7993,15 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT1.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[2]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( at1.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.FloatCompareAndBranch.rel][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 	PopFStack;
 
      | 51 :
-  EmitNtCMem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtCMem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7938,15 +8018,15 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( AT0.CMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fcomp');  EmitSuffix( e^.son[1]^.gcg^.CMem.mode);  CodeGen.EmitTab;  EmitMemAdr( at0.CMem.am);  CodeGen.EmitLn;
  CodeGen.EmitString('	fstsw	%ax');  CodeGen.EmitLn;
  CodeGen.EmitString('	sahf');  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 	PopFStack;
 
      | 52 :
-  EmitNtfstack(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2],nest+1,AT1 );
+  EmitNtfstack(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7976,8 +8056,8 @@ BEGIN
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[Reverse[e^.attr^.FloatCompareAndBranch.rel]][SignedTable[e^.attr^.FloatCompareAndBranch.mode]]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.FloatCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 53 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -7994,12 +8074,12 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	cmpl	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpl	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 54 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,AT1 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMemOrIm(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8016,27 +8096,27 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	movl	');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
 	CASE e^.attr^.SetCompareAndBranch.rel OF
 	| RelLess:
- CodeGen.EmitString('	or	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	or	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
 	e^.attr^.SetCompareAndBranch.rel := RelUnequal;
 	| RelLessOrEqual:
- CodeGen.EmitString('	and	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	and	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
 	e^.attr^.SetCompareAndBranch.rel := RelEqual;
 	| RelGreater:
- CodeGen.EmitString('	and	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	and	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
 	e^.attr^.SetCompareAndBranch.rel := RelUnequal;
 	| RelGreaterOrEqual:
- CodeGen.EmitString('	or	');  EmitAdrMode( AT1.RegOrCMemOrIm.am);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	or	');  EmitAdrMode( at1.RegOrCMemOrIm.am);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitLn;
 	e^.attr^.SetCompareAndBranch.rel := RelEqual;
 	END;
- CodeGen.EmitString('	cmpl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitChar(',');  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
+ CodeGen.EmitString('	cmpl	');  EmitRegister(RegAlloc.allocation[1].scr[1]);  CodeGen.EmitString(", ");  EmitRegister(RegAlloc.allocation[1].op[1]);  CodeGen.EmitLn;
  CodeGen.EmitString('	j');  CodeGen.EmitString( RelationTable[e^.attr^.SetCompareAndBranch.rel][FALSE]);  CodeGen.EmitTab;  CodeGen.EmitString( e^.attr^.SetCompareAndBranch.tar^);  CodeGen.EmitLn;
 
      | 55 :
-  EmitNtRegOrIm(e^.son[1],nest+1,AT0 );
-  EmitNtRegOrCMem(e^.son[2],nest+1,AT1 );
+  EmitNtRegOrIm(e^.son[1],nest+1,at0 );
+  EmitNtRegOrCMem(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8053,7 +8133,7 @@ BEGIN
     END;
 
 	CurRoundMode := RndUnknown;
- CodeGen.EmitString('	btl	');  EmitAdrMode( AT0.RegOrIm.am);  CodeGen.EmitChar(',');  EmitAdrMode( AT1.RegOrCMem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	btl	');  EmitAdrMode( at0.RegOrIm.am);  CodeGen.EmitString(", ");  EmitAdrMode( at1.RegOrCMem.am);  CodeGen.EmitLn;
 	IF e^.attr^.TestMembershipAndBranchL.cond THEN
  CodeGen.EmitString('	jc	');  CodeGen.EmitString( e^.attr^.TestMembershipAndBranchL.tar^);  CodeGen.EmitLn;
 	ELSE
@@ -8061,7 +8141,7 @@ BEGIN
 	END;
 
      | 56 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8085,8 +8165,8 @@ BEGIN
  CodeGen.EmitString('	jnz	');  CodeGen.EmitString( e^.attr^.TestOddAndBranch.tar^);  CodeGen.EmitLn;
 
      | 57 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
-  EmitNtreg(e^.son[2],nest+1,AT1 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
+  EmitNtreg(e^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8110,7 +8190,7 @@ BEGIN
 	END;
 
      | 58 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8134,7 +8214,7 @@ BEGIN
 	END;
 
      | 59 :
-  EmitNtarglist(e^.son[1],nest+1,AT0 );
+  EmitNtarglist(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8169,8 +8249,8 @@ BEGIN
 	END;
 
      | 60 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2]^.son[1]^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2]^.son[1]^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8187,12 +8267,12 @@ BEGIN
     END;
 
 	CheckRoundMode (RndNegInf);
- CodeGen.EmitString('	fistpl	');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fistpl	');  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 	PopFStack;
 
      | 61 :
-  EmitNtmem(e^.son[1],nest+1,AT0 );
-  EmitNtfreg(e^.son[2]^.son[1]^.son[2],nest+1,AT1 );
+  EmitNtmem(e^.son[1],nest+1,at0 );
+  EmitNtfreg(e^.son[2]^.son[1]^.son[2],nest+1,at1 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8209,7 +8289,7 @@ BEGIN
     END;
 
 	CheckRoundMode (RndZero);
- CodeGen.EmitString('	fistpl	');  EmitMemAdr( AT0.mem.am);  CodeGen.EmitLn;
+ CodeGen.EmitString('	fistpl	');  EmitMemAdr( at0.mem.am);  CodeGen.EmitLn;
 	PopFStack;
 
      | 62 :
@@ -8428,7 +8508,7 @@ BEGIN
  CodeGen.EmitString('	ret');  CodeGen.EmitLn;
 
      | 65 :
-  EmitNtreg(e^.son[1],nest+1,AT0 );
+  EmitNtreg(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8445,7 +8525,7 @@ BEGIN
     END;
 
      | 66 :
-  EmitNtfreg(e^.son[1],nest+1,AT0 );
+  EmitNtfreg(e^.son[1],nest+1,at0 );
     IF (RegAlloc.allocation [1]. num>0) THEN
        PerformActions (1);
     END;
@@ -8543,23 +8623,47 @@ END EmitStatement;
 
 
 (* ------------------------------------------------------------------------
- * Procedure EmitInstruction  --  needs clean up
+ * Procedure EmitInstruction
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitInstruction ( e : IR.Expression );
+
 BEGIN
-   IF IR.OptEmitIR THEN IR.PrintExpression (e); END;
+  IF IR.OptEmitIR THEN
+     IR.PrintExpression(e)
+  END; (* IF *)
+
 (*++++++ start insertion IpEmitI1 ++++++*)
 
-      localavail[0] := { ORD (Regeax)-0,  ORD (Regebx)-0,  ORD (Regecx)-0,  ORD (Regedx)-0,  ORD (Regesi)-0,  ORD (Regedi)-0,  ORD (Regst)-0, ORD (Regst1)-0};
-
+  localavail[0] :=
+    { ORD(Regeax), ORD(Regebx), ORD(Regecx), ORD(Regedx),
+      ORD(Regesi), ORD(Regedi),  ORD(Regst), ORD(Regst1) };
 
 (*------ end   insertion IpEmitI1 ------*)
-   RegAlloc.RegAllo (e, localavail);
+
+  RegAlloc.RegAllo(e, localavail);
+
 (******* empty insertion IpEmitI2 *******)
-   EmitStatement (e);
+
+  EmitStatement(e)
 END EmitInstruction;
 
+
+(* ------------------------------------------------------------------------
+ * Private procedure InitPowerTable
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE InitPowerTable;
+
+VAR
+  i : CARDINAL;
+
+BEGIN
+  PowerTable[0] := 1;
+  FOR i := 1 TO MaxPowerTable DO
+    PowerTable[i] := 2 * PowerTable[i-1]
+  END (* FOR *)
+END InitPowerTable;
 
 
 (* MODULE Initialisation *)
@@ -8568,76 +8672,75 @@ VAR
   RegisterSetEmpty : RegisterSet;
 
 BEGIN (* Emit *)
-  RegisterSetEmpty [0] := {};
+  InitPowerTable;
+  RegisterSetEmpty[0] := {};
 
 (*++++++ start insertion IpEmitInit ++++++*)
 
-    SizeTable [UnsignedByte] := ByteSize;
-    SizeTable [UnsignedWord] := WordSize;
-    SizeTable [UnsignedLong] := LongSize;
-    SizeTable [SignedByte]   := ByteSize;
-    SizeTable [SignedWord]   := WordSize;
-    SizeTable [SignedLong]   := LongSize;
-    SizeTable [FloatShort]   := SizeREAL;
-    SizeTable [FloatLong]    := SizeLONGREAL;
+  SizeTable[UnsignedByte] := ByteSize;
+  SizeTable[UnsignedWord] := WordSize;
+  SizeTable[UnsignedLong] := LongSize;
+  SizeTable[SignedByte] := ByteSize;
+  SizeTable[SignedWord] := WordSize;
+  SizeTable[SignedLong] := LongSize;
+  SizeTable[FloatShort] := SizeREAL;
+  SizeTable[FloatLong] := SizeLONGREAL;
 
-    SuffixTable [UnsignedByte] := 'b';
-    SuffixTable [UnsignedWord] := 'w';
-    SuffixTable [UnsignedLong] := 'l';
-    SuffixTable [SignedByte]   := 'b';
-    SuffixTable [SignedWord]   := 'w';
-    SuffixTable [SignedLong]   := 'l';
-    SuffixTable [FloatShort]   := 's';
-    SuffixTable [FloatLong]    := 'l';
+  SuffixTable[UnsignedByte] := "b";
+  SuffixTable[UnsignedWord] := "w";
+  SuffixTable[UnsignedLong] := "l";
+  SuffixTable[SignedByte] := "b";
+  SuffixTable[SignedWord] := "w";
+  SuffixTable[SignedLong] := "l";
+  SuffixTable[FloatShort] := "s";
+  SuffixTable[FloatLong] := "l";
 
-    SignedTable [UnsignedByte] := FALSE;
-    SignedTable [UnsignedWord] := FALSE;
-    SignedTable [UnsignedLong] := FALSE;
-    SignedTable [SignedByte]   := TRUE;
-    SignedTable [SignedWord]   := TRUE;
-    SignedTable [SignedLong]   := TRUE;
-    SignedTable [FloatShort]   := FALSE;
-    SignedTable [FloatLong]    := FALSE;
+  SignedTable[UnsignedByte] := FALSE;
+  SignedTable[UnsignedWord] := FALSE;
+  SignedTable[UnsignedLong] := FALSE;
+  SignedTable[SignedByte] := TRUE;
+  SignedTable[SignedWord] := TRUE;
+  SignedTable[SignedLong] := TRUE;
+  SignedTable[FloatShort] := FALSE;
+  SignedTable[FloatLong] := FALSE;
 
-    RelationTable [RelEqual]	     [FALSE] := 'e';
-    RelationTable [RelUnequal]	     [FALSE] := 'ne';
-    RelationTable [RelLess]	     [FALSE] := 'b';
-    RelationTable [RelLessOrEqual]   [FALSE] := 'be';
-    RelationTable [RelGreater]	     [FALSE] := 'a';
-    RelationTable [RelGreaterOrEqual][FALSE] := 'ae';
-    RelationTable [RelEqual]	     [TRUE ] := 'e';
-    RelationTable [RelUnequal]	     [TRUE ] := 'ne';
-    RelationTable [RelLess]	     [TRUE ] := 'l';
-    RelationTable [RelLessOrEqual]   [TRUE ] := 'le';
-    RelationTable [RelGreater]	     [TRUE ] := 'g';
-    RelationTable [RelGreaterOrEqual][TRUE ] := 'ge';
+  RelationTable[RelEqual][FALSE] := "e";
+  RelationTable[RelUnequal][FALSE] := "ne";
+  RelationTable[RelLess][FALSE] := "b";
+  RelationTable[RelLessOrEqual][FALSE] := "be";
+  RelationTable[RelGreater][FALSE] := "a";
+  RelationTable[RelGreaterOrEqual][FALSE] := "ae";
+  RelationTable[RelEqual][TRUE ] := "e";
+  RelationTable[RelUnequal][TRUE ] := "ne";
+  RelationTable[RelLess][TRUE ] := "l";
+  RelationTable[RelLessOrEqual][TRUE ] := "le";
+  RelationTable[RelGreater][TRUE ] := "g";
+  RelationTable[RelGreaterOrEqual][TRUE ] := "ge";
 
-    Reverse [RelEqual]		:= RelEqual;
-    Reverse [RelUnequal]	:= RelUnequal;
-    Reverse [RelLess]		:= RelGreater;
-    Reverse [RelLessOrEqual]	:= RelGreaterOrEqual;
-    Reverse [RelGreater]	:= RelLess;
-    Reverse [RelGreaterOrEqual]	:= RelLessOrEqual;
+  Reverse[RelEqual]		:= RelEqual;
+  Reverse[RelUnequal]	:= RelUnequal;
+  Reverse[RelLess]		:= RelGreater;
+  Reverse[RelLessOrEqual]	:= RelGreaterOrEqual;
+  Reverse[RelGreater]	:= RelLess;
+  Reverse[RelGreaterOrEqual]	:= RelLessOrEqual;
 
-    PowerTable [0] := 1;
-    FOR i := 1 TO MaxPowerTable DO PowerTable [i] := 2 * PowerTable [i-1] END;
+  WordReg[Regeax] := "%ax";
+  WordReg[Regebx] := "%bx";
+  WordReg[Regecx] := "%cx";
+  WordReg[Regedx] := "%dx";
+  WordReg[Regesi] := "%si";
+  WordReg[Regedi] := "%di";
+  ByteReg[Regeax] := "%al";
+  ByteReg[Regebx] := "%bl";
+  ByteReg[Regecx] := "%cl";
+  ByteReg[Regedx] := "%dl";
 
-    WordReg[Regeax] := '%ax';
-    WordReg[Regebx] := '%bx';
-    WordReg[Regecx] := '%cx';
-    WordReg[Regedx] := '%dx';
-    WordReg[Regesi] := '%si';
-    WordReg[Regedi] := '%di';
-    ByteReg[Regeax] := '%al';
-    ByteReg[Regebx] := '%bl';
-    ByteReg[Regecx] := '%cl';
-    ByteReg[Regedx] := '%dl';
+  DefineOption(oEmitIR, "EmitIR", FALSE, FALSE);
+  DefineOption(oEmitMatch, "EmitMatch", FALSE, FALSE);
+  DefineOption(oRegAlloc, "RegAlloc", FALSE, FALSE);
+  DefineOption(oCCall, "CcallsMocka", FALSE, FALSE);
+  DefineOption(ElfOption, "elf", FALSE, TRUE);
+  DefineOption(oAssemblerListing, "S", FALSE, TRUE);
 
-    DefineOption (oEmitIR, 'EmitIR', FALSE, FALSE);
-    DefineOption (oEmitMatch, 'EmitMatch', FALSE, FALSE);
-    DefineOption (oRegAlloc, 'RegAlloc', FALSE, FALSE);
-    DefineOption (oCCall, 'CcallsMocka', FALSE, FALSE);
-    DefineOption (ElfOption, 'elf', FALSE, TRUE);
-    DefineOption (oAssemblerListing, 'S', FALSE, TRUE);
-(*------ end   insertion IpEmitInit ------*)
+(*------ end insertion IpEmitInit ------*)
 END Emit.
