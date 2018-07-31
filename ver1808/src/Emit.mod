@@ -1065,6 +1065,7 @@ BEGIN
   CodeGen.EmitTab;
   CodeGen.EmitString(".ascii");
   CodeGen.EmitTab;
+  (* opening double-quote *)
   CodeGen.Emitchar('"');
 
   FOR index := 0 TO length - 1 DO
@@ -1093,7 +1094,9 @@ BEGIN
     END (* IF *)
   END; (* FOR *)
 
-  CodeGen.EmitString('\000"');
+  CodeGen.EmitString("\000");
+  (* closing double-quote *)
+  CodeGen.EmitChar('"');
   CodeGen.EmitLn;
 
   CodeGen.EmitTab;
