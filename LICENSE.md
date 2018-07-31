@@ -9,7 +9,7 @@ GPL license. This included the automatically generated source code of the compil
 without the BEG software that generated these sources and without the code optimiser that was included
 in commercial versions of MOCKA.
 
-The MOCKA software in this repository is a derivative of this open-source version under GPL licensing.
+The MOCKA software in this repository is a derivative of this open-source version under [GPL licensing](https://www.gnu.org/licenses/licenses.html#GPL).
 
 Although the GPL license demands that the license is distributed together with the software, the MOCKA
 distribution packages did not include any LICENSE file and the official MOCKA website is no longer online.
