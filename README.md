@@ -3,12 +3,6 @@ MOCKA Modula-2 Compiler System, originally by GMD
 
 Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 
-### Language Extensions
-* Conditional compilation directives
-* Lowline `_` and dollar `$` in identifiers
-* Types BYTE, SHORTCARD, SHORTINT, LONGCARD
-* FOREIGN DEFINITION MODULE for interfacing to C
-
 ### Target Architecture
 * Intel x86 32-bit via AT&T Assembler syntax
 
@@ -16,4 +10,19 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 * Linux and BSD with Elf executable and library format
 * MacOS and Darwin with Mach-O executable and library format (work in progress)
 
-**Version 1807**, updated July 2018
+### Language Extensions
+* Conditional compilation directives
+* Lowline `_` and dollar `$` in identifiers
+* Types BYTE, SHORTCARD, SHORTINT, LONGCARD
+* FOREIGN DEFINITION MODULE for interfacing to C
+
+### Current Release
+* **Version 1807**, updated July 2018
+
+### Release History
+* last maintenance release 0608 from Uni Karlsruhe in August 2006
+* minor release 1208 by Chr. Maurer in August 2012, based on 0608
+* clean-up release 1807 by B.Kowarsch in July 2018, based on 1208
+* revised release 1808 by B,Kowarsch in August 2018, work in progress
+
+\[END OF FILE\]
