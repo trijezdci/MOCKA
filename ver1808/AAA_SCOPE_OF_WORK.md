@@ -10,11 +10,12 @@
 
 ### Stage 3
 * integrate [CodeGen](src/CodeGen.def), [Newline](src/Newline.def), [Tabulator](src/Tabulator.def)
-* replace Emit with revised version
+* replace Emit with [revised version](src/Emit.mod)
 * build and test with new CodeGen and Emit
 
 ### Stage 4
-* integrate MockaArgReader, MockaArgLexer, MockaArgParser
+* integrate [MockaArgReader](src/MockaArgReader.def), 
+[MockaArgLexer](src/MockaArgLexer.def), [MockaArgParser](src/MockaArgParser.def)
 * build and test with new command line interface
 * write bash script to mimic the old options
 
