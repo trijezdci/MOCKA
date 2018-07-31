@@ -221,7 +221,7 @@ END EmitCtrl;
  * Public procedure EmitChar(ch)
  * ------------------------------------------------------------------------
  * Writes character 'ch' to output buffer.
- * Interprets ASCII TAB.  Ignores all other control characters.
+ * Interprets ASCII TAB in 'ch'.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 PROCEDURE EmitChar ( ch : CHAR );
@@ -260,10 +260,25 @@ END EmitChar;
 
 
 (* ------------------------------------------------------------------------
+ * Public procedure EmitTabbedChar(ch)
+ * ------------------------------------------------------------------------
+ * Writes an ACII TAB followed by character 'ch' to output buffer.
+ * Interprets ASCII TAB in 'ch'.  Ignores all other control characters.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitTabbedChar ( ch : CHAR );
+
+BEGIN
+  EmitTab;
+  EmitChar(ch)
+END EmitTabbedChar;
+
+
+(* ------------------------------------------------------------------------
  * Public procedure EmitCharNTimes(ch, n)
  * ------------------------------------------------------------------------
  * Writes character 'ch' 'n' times to output buffer, where n <= 128.
- * Interprets ASCII TAB.  Ignores all other control characters.
+ * Interprets ASCII TAB in 'ch'.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
 CONST MaxCharRepeat = 128;
@@ -323,10 +338,10 @@ END EmitCharNTimes;
  * Public procedure EmitString(s)
  * ------------------------------------------------------------------------
  * Writes string 's' to output buffer.
- * Interprets ASCII TAB.  Ignores all other control characters.
+ * Interprets ASCII TAB in 's'.  Ignores all other control characters.
  * ------------------------------------------------------------------------ *)
 
-PROCEDURE EmitString ( (*CONST*) VAR s : ARRAY OF CHAR );
+PROCEDURE EmitString ( VAR (*CONST*) s : ARRAY OF CHAR );
 
 VAR
   ch : CHAR;
@@ -383,6 +398,21 @@ BEGIN
     status := Success
   END (* IF *)
 END EmitString;
+
+
+(* ------------------------------------------------------------------------
+ * Public procedure EmitTabbedString(s)
+ * ------------------------------------------------------------------------
+ * Writes ASCII TAB followed by string 's' to output buffer.
+ * Interprets ASCII TAB in 's'.  Ignores all other control characters.
+ * ------------------------------------------------------------------------ *)
+
+PROCEDURE EmitTabbedString ( VAR (*CONST*) s : ARRAY OF CHAR );
+
+BEGIN
+  EmitTab;
+  EmitString(s)
+END EmitTabbedString;
 
 
 (* ------------------------------------------------------------------------
