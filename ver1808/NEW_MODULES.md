@@ -45,4 +45,4 @@ Tabulator mode and width management
 * [Tabulator.def](src/Tabulator.def)
 * [Tabulator.mod](src/Tabulator.mod)
 
-\[END OF FILE\[
+\[END OF FILE\]
