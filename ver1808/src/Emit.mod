@@ -174,11 +174,12 @@ TYPE RoundMode = ( RndNearest, RndZero, RndInf, RndNegInf, RndUnknown );
 CONST
   MaxDisplay = 15; (* Max. nesting Level of procedures *)
   MaxFloatTempo = 64; (* Max. size of Float-Stack *)
-  MaxPowerTable	 = 31;
+  MaxPowerTable = 31;
   NoTempo = 1111111111;
 
   TAB = CHR(9);
   SPACE = CHR(32);
+  DQUOTE = CHR(34);
 
   EmitAnnotations = MockaBuildParams.AssemblyAnnotations;
 
@@ -186,13 +187,13 @@ CONST
 VAR
   RelationTable :
     ARRAY CgBase.Relation OF ARRAY [FALSE..TRUE] OF ARRAY [0..2] OF CHAR;
-  (* maps Relation to e, ne, g, ge, l, le, a, ae, b, be  *)
+  (* maps Relation to e, ne, g, ge, l, le, a, ae, b, be *)
 
   Reverse : ARRAY CgBase.Relation OF CgBase.Relation;
   (* maps Relation to reverse Relation *)
 
   PowerTable : ARRAY [0 .. MaxPowerTable] OF LONGINT;
-  (* powers of two, 1 <= 2^n <= 2^MaxPowerTable   *)
+  (* powers of two, 1 <= 2^n <= 2^MaxPowerTable *)
 
   WordReg, ByteReg : ARRAY Register OF ARRAY [0..4] OF CHAR;
   (* maps to register fractions *)
@@ -426,7 +427,9 @@ BEGIN
     CodeGen.EmitLn;
 
     CodeGen.EmitTab;
-    CodeGen.EmitString("ffree	%st(7)");
+    CodeGen.EmitString("ffree");
+    CodeGen.EmitTab;
+    CodeGen.EmitString("%st(7)");
     CodeGen.EmitLn
   ELSE
     INC (CurFStackSize)
@@ -600,7 +603,8 @@ BEGIN
   | 2 :
     CodeGen.EmitString(WordReg[r])
 
-  | 4, 8: CodeGen.EmitChar("%");
+  | 4, 8 :
+    CodeGen.EmitChar("%");
     CodeGen.EmitString(IR.RegNameTable[r])
 
   ELSE
@@ -1110,21 +1114,21 @@ BEGIN
   CodeGen.EmitString(".ascii");
   CodeGen.EmitTab;
   (* opening double-quote *)
-  CodeGen.Emitchar('"');
+  CodeGen.Emitchar(DQUOTE);
 
   FOR index := 0 TO length - 1 DO
     ch := string[index];
     IF numbersNeedRestart AND (ch >= "0") AND (ch <= "9") THEN (* restart *)
-      CodeGen.EmitString('"');
+      CodeGen.EmitChar(DQUOTE);
       CodeGen.EmitLn;
 
       CodeGen.Tab;
       CodeGen.EmitString(".ascii");
       CodeGen.EmitTab;
-      CodeGen.EmitChar('"')
+      CodeGen.EmitChar(DQUOTE)
     END; (* IF *)
 
-    IF (ch >= " ") AND (ch <= "z") AND (ch # '"') AND (ch # "\") THEN
+    IF (ch >= SPACE) AND (ch <= "z") AND (ch # DQUOTE) AND (ch # "\") THEN
       CodeGen.EmitChar(ch);
       numbersNeedRestart := FALSE
     ELSE
@@ -1140,7 +1144,7 @@ BEGIN
 
   CodeGen.EmitString("\000");
   (* closing double-quote *)
-  CodeGen.EmitChar('"');
+  CodeGen.EmitChar(DQUOTE);
   CodeGen.EmitLn;
 
   CodeGen.EmitTab;
