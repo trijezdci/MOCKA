@@ -1,8 +1,9 @@
 # Licensing Information
 
 MOCKA was initially conceived, developed and distributed by GMD[1] as a commercial closed-source product
-for diverse Unix platforms. A back end generator called BEG was also developed in order to generate
-the compiler's back ends for multiple target architectures automatically from a formal target description.
+for diverse Unix platforms. A back end generator called [BEG](https://www.hei.biz/beg/) was also developed
+in order to generate the compiler's back ends for multiple target architectures automatically
+from a formal target description.
 
 The MOCKA version for Linux and BSD on the Intel x86 platform was however released open-source under the
 [GPL license](https://www.gnu.org/licenses/licenses.html#GPL). This included the automatically generated
