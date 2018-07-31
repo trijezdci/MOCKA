@@ -1,6 +1,6 @@
 # Licensing Information
 
-MOCKA was initially conceived, developed and distributed by GMD as a commercial closed-source product
+MOCKA was initially conceived, developed and distributed by GMD[1] as a commercial closed-source product
 for diverse Unix platforms. A back end generator called BEG was also developed in order to generate
 the compiler's back ends for multiple target architectures automatically from a formal target description.
 
@@ -9,18 +9,20 @@ GPL license. This included the automatically generated source code of the compil
 without the BEG software that generated these sources and without the code optimiser that was included
 in commercial versions of MOCKA.
 
-The MOCKA software in this repository is a descendant of this open-source version under GPL licensing.
+The MOCKA software in this repository is a derivative of this open-source version under GPL licensing.
 
 Although the GPL license demands that the license is distributed together with the software, the MOCKA
 distribution packages did not include any LICENSE file and the official MOCKA website is no longer online.
 As a result, some details regarding the licensing are currently unknown. While it is known that MOCKA was
-released when the current version of the GPL was version 2, it is not known whether it was licensed with
-the clause "... or any later version of this license". Also, it is not currently known whether
-MOCKA's runtime and Modula-2 standard library were licensed under the GPL or the LGPL.
+released when the current version of the GPL was [version 2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html),
+it is not known whether it was licensed with the clause *"... or any later version of this license"*.
+Also, it is not currently known whether MOCKA's runtime and Modula-2 standard library were licensed under
+the GPL or the LGPL.
 
 In order to comply strictly with the GPL/LGPL license terms, the LICENSE file should be made part of this
 repository and any distribution packages. To be able to do so, we have written to the director of
 intellectual property affairs at Fraunhofer Society[1] for clarification and confirmation.
 
 ___
-[1] [Fraunhofer Society](https://www.fraunhofer.de/en.html) now holds the copyrights to MOCKA.
+[1] Former [German National Research Centre for Computer Science](https://www.gmd.de/)
+[2] [Fraunhofer Society](https://www.fraunhofer.de/en.html) now holds the copyrights to MOCKA.
