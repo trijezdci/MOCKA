@@ -23,6 +23,8 @@ Status July 2018
 
 `--synonym-symbols`, `--no-synonym-symbols` enable/disable `<>`, `&` and `~`
 
+`--mocka-extensions`, `--no-mocka-extensions` enable/disable language extensions
+
 `--index-checks`, `-I` add code to check array bounds (default)
 
 `--no-index-checks`, `-i` do not add code to check array bounds
