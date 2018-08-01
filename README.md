@@ -4,7 +4,8 @@ MOCKA Modula-2 Compiler System, originally by GMD
 Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 
 ### Target Architecture
-* Intel x86 32-bit via AT&T Assembler syntax
+* Intel x86 32-bit
+* generates AT&T syntax assembly output
 
 ### Operating System Support
 * Linux and BSD with Elf executable and library format
