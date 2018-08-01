@@ -10,11 +10,10 @@ National Research Centre for Computer Science (GMD) at its former research
 lab at the University of Karlsruhe [2].
 
 The Compiler was distributed for diverse Unix platforms as closed source
-commercial software and included an optimiser. The Linux and BSD version
-with a back end for the Intel x86 but without optimiser was released
-open-source under GPL licensing free of charge.
-
-The software in this repository is a derivative of this open-source version.
+commercial software and included an optimiser. By contrast, the Linux and
+BSD version with a back end for the Intel x86 but without optimiser was
+released open-source under GPL licensing free of charge. The software in
+this repository is a derivative of this open-source version.
 
 ### Target Architecture
 * Intel x86 32-bit
