@@ -9,7 +9,7 @@ Status July 2018
 
 * Rename modules and procedures prefixed with 'Ass' to prefix 'Asm'
 * Bring compiler command line options in line with *nix standards
-* Add Mach-O support and compiler command line option --mach-o
+* Add Mach-O support and compiler command line option `--mach-o`
 * Add parser for new configuration file /etc/mocka.conf
 
 ### Mid Term
