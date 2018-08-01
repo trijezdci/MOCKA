@@ -18,6 +18,7 @@ Status July 2018
 * Remove shell from compiler and make it a standalone program
 * Add compiler switch to enable/disable MOCKA specific language extensions
 * Change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
+* Rewrite the *MOCKA User Manual* to reflect all changes made since its last revision
 
 ### Long Term
 
