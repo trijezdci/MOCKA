@@ -14,16 +14,16 @@ Status July 2018
 
 ### Mid Term
 
-* Build and test on FreeBSD.
+* Build and test on FreeBSD
 * Remove shell from compiler and make it a standalone program
 * Add compiler switch to enable/disable MOCKA specific language extensions
 * Change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
 
 ### Long Term
 
-* Explore the possibility of PIM4 support.
-* Explore the possibility of a Windows port.
-* Try to convince Fraunhofer to release the VAX/VMS version under the GPL.
+* Explore the possibility of PIM4 support
+* Explore the possibility of a Windows port
+* Try to convince Fraunhofer to release the VAX/VMS version under the GPL
 
 ## Details
 
