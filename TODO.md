@@ -19,6 +19,10 @@ Status July 2018
 
 ### Command Line Options
 
+`--octal-literals`, `--no-octal-literals` enable/disable octal literals
+
+`--synonym-symbols`, `--no-synonym-symbols` enable/disable `<>`, `&` and `~`
+
 `--index-checks`, `-I` add code to check array bounds (default)
 
 `--no-index-checks`, `-i` do not add code to check array bounds
@@ -63,7 +67,7 @@ Differences between ELF and Mach-O:
 * Mach-O labels are not prefixed
 * ELF procedures are not prefixed
 * Mach-O procedures are prefixed by a lowline, example `_Foo:`
-* Mach-O procedures are 16 byte aligned (use wrappers when calling extern)
+* Mach-O procedures are 16 byte aligned (important when calling extern)
 
 ##### Mach-O Labels
 
