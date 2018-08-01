@@ -65,8 +65,18 @@ Differences between ELF and Mach-O:
 * Mach-O procedures are prefixed by a lowline, example `_Foo:`
 * Mach-O procedures are 16 byte aligned (use wrappers when calling extern)
 
-To Do: find the location in Emit.mod where labels and procedure labels are written,
-add a flag for Mach-O versus Elf, emit labels according to the value of said flag.
+##### Mach-O Labels
+
+Before MOCKA supported ELF, it generated labels for the a.out object format which
+was then common on Unix systems. MachO object format uses the a.out naming convention
+for labels and procedures. The code to produce these labels is still in MOCKA.
+
+#### Mach-O Stack Alignment
+
+MOCKA defines a constant for stack alignment. Its value is four. If this works
+as it was probably intended, then changing stack alignment to the value used by
+Mach-O could be as simple a matter as changing the value to 16 and rebuild the
+compiler. However, it is not known whether this has ever been tested.
 
 ### Long Term
 
