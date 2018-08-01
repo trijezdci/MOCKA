@@ -11,6 +11,7 @@ Status July 2018
 * Bring compiler command line options in line with *nix standards
 * Add Mach-O support and compiler command line option `--mach-o`
 * Add parser for new configuration file /etc/mocka.conf
+* Rewrite the MOCKA man page to reflect all changes made since its last revision
 
 ### Mid Term
 
