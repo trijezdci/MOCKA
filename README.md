@@ -20,7 +20,7 @@ The software in this repository is a derivative of this open-source version.
 
 ### Target Architecture
 * Intel x86 32-bit
-* generates AT&T syntax assembly output
+* generates [AT&T syntax](https://en.wikipedia.org/wiki/X86_assembly_language#Syntax) assembly output
 
 ### Operating System Support
 * Linux and BSD with Elf executable and library format
