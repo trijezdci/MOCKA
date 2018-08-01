@@ -36,6 +36,6 @@ For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.c
 
 ### Roadmap
 
-For a **roadmap** for future work, see [ROADMAP.md](./ROADMAP.md)
+For a **roadmap** of ongoing and future work, see [ROADMAP.md](./ROADMAP.md)
 
 \[END OF FILE\]
