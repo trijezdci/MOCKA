@@ -23,8 +23,8 @@ The software in this repository is a derivative of this open-source version.
 * generates [AT&T syntax](https://en.wikipedia.org/wiki/X86_assembly_language#Syntax) assembly output
 
 ### Operating System Support
-* Linux and BSD with [Elf executable and library format](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)
-* MacOS and Darwin with [Mach-O object file format](https://en.wikipedia.org/wiki/Mach-O) (work in progress)
+* Linux and BSD with [Elf](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format) executable and linkable format
+* MacOS and Darwin with [Mach-O](https://en.wikipedia.org/wiki/Mach-O) object file format (work in progress)
 
 ### Language Extensions
 * Conditional compilation directives
