@@ -71,6 +71,10 @@ Status July 2018
 
 `--work-dir`, `-W` set working directory (for output)
 
+The grammar for the command line argument syntax is at:
+
+https://github.com/trijezdci/MOCKA/blob/master/ver1808/cli-args-grammar.gll
+
 ### Mach-O Support
 
 Differences between ELF and Mach-O:
