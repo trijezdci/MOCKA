@@ -5,7 +5,7 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [1]
 
 ### History
 
-The MOCKA compiler was developed between 1988 and 1992 by the former German
+The MOCKA Modula-2 compiler was developed between 1988 and 1992 by the former German
 National Research Centre for Computer Science (GMD) [2] at its former research
 lab at the University of Karlsruhe [3].
 
