@@ -16,7 +16,7 @@ as closed source commercial software and included an industrial strength optimis
 Linux and BSD version of MOCKA with a back end for the Intel&nbsp;x86 architecture but without
 the optimiser was released open-source under GPL licensing free of charge.
 
-The software in this repository is a derivative of this open-source version.
+The software in this repository is a derivative of the aforementioned open-source version.
 
 ### Target Architecture
 * Intel x86 32-bit
