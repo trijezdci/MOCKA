@@ -53,6 +53,10 @@ For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.c
 
 For a **roadmap** of ongoing and future work, see [ROADMAP](./ROADMAP.md)
 
+### Contributing
+
+See [CONTRIBUTING](./CONTRIBUTING.md)
+
 ___
 
 #### References
