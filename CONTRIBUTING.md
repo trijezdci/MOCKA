@@ -12,6 +12,9 @@ We use the coding standard of the Modula-2 Software Foundation's M2BSK project:
 
 https://github.com/m2sf/m2bsk/wiki/Coding-Standard
 
+However, since MOCKA is only supposed to be compiled using MOCKA itself, cross-dialect portability is not a goal.
+No ISO Modula-2 version of modules that use casting is required.
+
 ### Work Items
 
 Please take a look at:
