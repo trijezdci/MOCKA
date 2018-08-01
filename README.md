@@ -55,7 +55,11 @@ For a **roadmap** of ongoing and future work, see [ROADMAP](./ROADMAP.md)
 
 ### Contributing to MOCKA
 
-See [CONTRIBUTING](./CONTRIBUTING.md)
+MOCKA is no longer supported by its creators. It needs volunteers to be maintained.
+
+In particular, help is needed with building/testing on FreeBSD, and with porting to Windows.
+
+For details, see [CONTRIBUTING](./CONTRIBUTING.md)
 
 ___
 
