@@ -1,7 +1,7 @@
 # MOCKA
 MOCKA Modula-2 Compiler System, originally by GMD
 
-Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3) [1]
+Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [1]
 
 ### Target Architecture
 * Intel x86 32-bit
