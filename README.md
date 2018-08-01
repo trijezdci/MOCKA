@@ -1,13 +1,13 @@
 # MOCKA
 MOCKA Modula-2 Compiler System, originally by GMD
 
-Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [[1](./README.md#references)]
+Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [[1, 2](./README.md#references)]
 
 ### Background
 
 The MOCKA Modula-2 compiler was developed between 1988 and 1992 by the former German
-National Research Centre for Computer Science (GMD) [[2](./README.md#references)] at
-its former research lab at the University of Karlsruhe [[3](./README.md#references)].
+National Research Centre for Computer Science (GMD) [[3](./README.md#references)] at
+its former research lab at the University of Karlsruhe [[4](./README.md#references)].
 GMD has since been dissolved and all its research institutes were merged into the
 [Fraunhofer Society](https://www.fraunhofer.de/en.html).
 
@@ -56,11 +56,12 @@ For a **roadmap** of ongoing and future work, see [ROADMAP](./ROADMAP.md)
 ___
 
 #### References
+[1] [Wikipedia entry on the Modula-2 programming language](https://en.wikipedia.org/wiki/Modula-2)
 
-[1] [Programming in Modula-2, 3rd edition, N.Wirth, Springer, 1988](https://www.springer.com/us/book/9783642835674)
+[2] [Programming in Modula-2, 3rd edition, N.Wirth, Springer, 1988](https://www.springer.com/us/book/9783642835674)
 
-[2] [Google translation of Wikipedia entry on the former GMD](https://translate.google.co.jp/translate?hl=en&sl=de&u=https://de.wikipedia.org/wiki/GMD-Forschungszentrum_Informationstechnik&prev=search)
+[3] [Google translation of Wikipedia entry on the former GMD](https://translate.google.co.jp/translate?hl=en&sl=de&u=https://de.wikipedia.org/wiki/GMD-Forschungszentrum_Informationstechnik&prev=search)
 
-[3] [Former MOCKA project page at University of Karlsruhe](http://www.info.uni-karlsruhe.de/projects.php/id=37&lang=en)
+[4] [Former MOCKA project page at University of Karlsruhe](http://www.info.uni-karlsruhe.de/projects.php/id=37&lang=en)
 
 \[END OF FILE\]
