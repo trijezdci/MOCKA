@@ -13,7 +13,7 @@ GMD has since been dissolved and all its research institutes were merged into th
 
 The MOCKA compiler system was distributed for diverse Unix platforms and architectures
 as closed source commercial software and included an industrial strength optimiser. The
-Linux and BSD version of MOCKA with a back end for the Intel x86 architecture but without
+Linux and BSD version of MOCKA with a back end for the Intel&nbsp;x86 architecture but without
 the optimiser was released open-source under GPL licensing free of charge.
 
 The software in this repository is a derivative of this open-source version.
