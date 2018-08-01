@@ -1,13 +1,13 @@
 # MOCKA
 MOCKA Modula-2 Compiler System, originally by GMD
 
-Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [1]
+Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [[1](./README.md#references)]
 
 ### History
 
 The MOCKA Modula-2 compiler was developed between 1988 and 1992 by the former German
-National Research Centre for Computer Science (GMD) [2] at its former research
-lab at the University of Karlsruhe [3].
+National Research Centre for Computer Science (GMD) [[2](./README.md#references)] at
+its former research lab at the University of Karlsruhe [[3](./README.md#references)].
 
 The MOCKA Compiler was distributed for diverse Unix platforms as closed source
 commercial software and included an optimiser. By contrast, the Linux and BSD
@@ -54,6 +54,7 @@ For a **roadmap** of ongoing and future work, see [ROADMAP](./ROADMAP.md)
 ___
 
 #### References
+
 [1] [Programming in Modula-2, 3rd edition, N.Wirth, Springer, 1988](https://www.springer.com/us/book/9783642835674)
 
 [2] [Google translation of Wikipedia entry on the former GMD](https://translate.google.co.jp/translate?hl=en&sl=de&u=https://de.wikipedia.org/wiki/GMD-Forschungszentrum_Informationstechnik&prev=search)
