@@ -13,6 +13,7 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
 ### Language Extensions
 * Conditional compilation directives
 * Lowline `_` and dollar `$` in identifiers
+* `|` may also prefix the first case label list
 * Types `BYTE`, `SHORTCARD`, `SHORTINT`, `LONGCARD`
 * `FOREIGN DEFINITION MODULE` for interfacing to C
 
