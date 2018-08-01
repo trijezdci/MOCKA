@@ -3,7 +3,7 @@ MOCKA Modula-2 Compiler System, originally by GMD
 
 Follows the 3rd edition of Wirth's *Programming in Modula-2*,aka PIM3 [[1](./README.md#references)]
 
-### History
+### Background
 
 The MOCKA Modula-2 compiler was developed between 1988 and 1992 by the former German
 National Research Centre for Computer Science (GMD) [[2](./README.md#references)] at
