@@ -1,7 +1,7 @@
 # MOCKA
 MOCKA Modula-2 Compiler System, originally by GMD
 
-Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3)
+Follows the 3rd edition of Wirth's *Programming in Modula-2* (PIM3) [1]
 
 ### Target Architecture
 * Intel x86 32-bit
@@ -37,5 +37,10 @@ For **scope of work** for version 1808, see [AAA_SCOPE_OF_WORK](https://github.c
 ### Ongoing and Future Work
 
 For a **roadmap** of ongoing and future work, see [ROADMAP](./ROADMAP.md)
+
+___
+
+#### References
+[1] [Programming in Modula-2, 3rd edition, N.Wirth, Springer, 1988](https://www.springer.com/us/book/9783642835674)
 
 \[END OF FILE\]
