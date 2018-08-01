@@ -1,23 +1,33 @@
 ## TO DO List for MOCKA Modula-2 Compiler
 Status July 2018
 
-(0) general (and likely ongoing) clean up of the source code
+### Ongoing
 
-(1) rename modules and procedures prefixed with 'Ass' to prefix 'Asm'
+* General clean up of the source code
 
-(2) remove shell from compiler and make it a standalone program
+### Short Term
 
-(3) bring compiler command line options in line with *nix standards
+* Rename modules and procedures prefixed with 'Ass' to prefix 'Asm'
+* Bring compiler command line options in line with *nix standards
+* Add Mach-O support and compiler command line option --mach-o
+* Add parser for new configuration file /etc/mocka.conf
 
-(4) add Mach-O support and compiler command line option --mach-o
+### Mid Term
 
-(5) add parser for new configuration file /etc/mocka.conf
+* Build and test on FreeBSD.
+* Remove shell from compiler and make it a standalone program
+* Add compiler switch to enable/disable MOCKA specific language extensions
+* Change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
 
-(6) add compiler switch to enable/disable MOCKA specific language extensions
+### Long Term
 
-(7) change pragma syntax from `%...` to standard classical Modula-2 `(*$...*)`
+* Explore the possibility of PIM4 support.
+* Explore the possibility of a Windows port.
+* Try to convince Fraunhofer to release the VAX/VMS version under the GPL.
 
-### Command Line Options
+## Details
+
+#### Command Line Options
 
 `--octal-literals`, `--no-octal-literals` enable/disable octal literals
 
@@ -90,9 +100,4 @@ The grammar for the configuration file syntax is at:
 
 https://github.com/trijezdci/MOCKA/blob/master/ver1808/conf-grammar.gll
 
-### Long Term
-
-* Build and test on FreeBSD.
-* Explore the possibility of PIM4 support.
-* Explore the possibility of a Windows port.
-* Try to convince Fraunhofer to release the VAX/VMS version under the GPL.
+\[END OF FILE\]
