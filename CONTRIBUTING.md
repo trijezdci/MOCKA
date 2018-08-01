@@ -16,7 +16,7 @@ https://github.com/m2sf/m2bsk/wiki/Coding-Standard
 
 Please take a look at:
 
-* The [scope of work file](./ver1808/AAA_SCOPE_OF_WORK.md) for the upcoming version
-* The [roadmap](./ROADMAP.md) file of the project
+* the [scope of work file](./ver1808/AAA_SCOPE_OF_WORK.md) for the upcoming version
+* the [roadmap](./ROADMAP.md) file of the project
 
 \[END OF FILE\]
