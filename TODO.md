@@ -84,6 +84,12 @@ as it was probably intended, then changing stack alignment to the value used by
 Mach-O could be as simple a matter as changing the value to 16 and rebuild the
 compiler. However, it is not known whether this has ever been tested.
 
+### Configuration File
+
+The grammar for the configuration file syntax is at:
+
+https://github.com/trijezdci/MOCKA/blob/master/ver1808/conf-grammar.gll
+
 ### Long Term
 
 * Build and test on FreeBSD.
