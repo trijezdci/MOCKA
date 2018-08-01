@@ -87,3 +87,4 @@ compiler. However, it is not known whether this has ever been tested.
 * Build and test on FreeBSD.
 * Explore the possibility of PIM4 support.
 * Explore the possibility of a Windows port.
+* Try to convince Fraunhofer to release the VAX/VMS version under the GPL.
