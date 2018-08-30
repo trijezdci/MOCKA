@@ -72,4 +72,14 @@ ___
 
 [4] [Former MOCKA project page at University of Karlsruhe](http://www.info.uni-karlsruhe.de/projects.php/id=37&lang=en)
 
+___
+
+#### The Modula-2 Webring
+
+[All Sites](http://www.modulaware.com/m2wr/?ring=modula2&id=1&m=hub) |
+[Previous Site](http://www.modulaware.com/m2wr/?ring=modula2&id=1&m=prev) |
+[Next Site](http://www.modulaware.com/m2wr/?ring=modula2&id=1&m=next) |
+[Random Site](http://www.modulaware.com/m2wr/?ring=modula2&id=1&m=random) |
+[Join the Webring](http://www.modulaware.com/m2wr/?ring=modula2&m=addsite)
+
 \[END OF FILE\]
