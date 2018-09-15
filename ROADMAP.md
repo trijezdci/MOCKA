@@ -23,6 +23,7 @@ Status July 2018
 
 ### Long Term
 
+* Follow recommendations in [[Kow18]](https://github.com/trijezdci/PDFs/blob/master/Classic-M2-Compiler-Maintenance.pdf)
 * Explore the possibility of PIM4 support
 * Explore the possibility of a Windows port
 * Try to convince Fraunhofer to release the VAX/VMS version under the GPL
@@ -105,5 +106,9 @@ compiler. However, it is not known whether this has ever been tested.
 The grammar for the configuration file syntax is at:
 
 https://github.com/trijezdci/MOCKA/blob/master/ver1808/conf-grammar.gll
+
+### References
+
+[Kow18] B.Kowarsch, [On the Maintenance of Classic Modula-2 Compilers](https://github.com/trijezdci/PDFs/blob/master/Classic-M2-Compiler-Maintenance.pdf).
 
 \[END OF FILE\]
