@@ -109,6 +109,6 @@ https://github.com/trijezdci/MOCKA/blob/master/ver1808/conf-grammar.gll
 
 ### References
 
-[Kow18] B.Kowarsch, [On the Maintenance of Classic Modula-2 Compilers](https://github.com/trijezdci/PDFs/blob/master/Classic-M2-Compiler-Maintenance.pdf).
+[Kow18] B.Kowarsch, [On the Maintenance of Classic Modula-2 Compilers](https://github.com/trijezdci/PDFs/blob/master/Classic-M2-Compiler-Maintenance.pdf), 2018.
 
 \[END OF FILE\]
