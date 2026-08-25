@@ -1,3 +1,8 @@
+# This roadmap has been retired!
+
+A new roadmap will be written when funding for a new 64-bit compiler has been obtained. For more details refer to the [README](https://github.com/trijezdci/MOCKA/blob/master/README.md) file.
+
+---
 ## Roadmap for MOCKA Modula-2 Compiler
 Status July 2018
 
