@@ -42,7 +42,7 @@ For **version change log**, see [CHANGES](https://github.com/trijezdci/MOCKA/blo
 
 ### Status
 
-MOCKA is no longer supported and **will not be further maintained**.
+In its current form, MOCKA is no longer supported and **will not be further maintained**.
 
 ### Where do we go from here?
 
