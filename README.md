@@ -56,9 +56,11 @@ Any major effort should instead be directed at implementing the revised and mode
 
 If and when funding has been obtained, the current code base in this repository will be moved to a legacy repository and archived, and this repository will then become the home of a new **MOCKA64** project. Until then keep your fingers crossed, thumbs pressed, knock on wood!
 
-### Legacy Code
+### Legacy Modula-2 Code
 
 In order to compile and run example code from the Modula-2 literature on modern 64-bit platforms, or to migrate any remaining legacy Modula-2 code, it is entirely sufficient to use migration tools such as the [Mtc2](https://github.com/cocolab8/cocktail-src/tree/master/mtc2) Modula-2 to C89 Translator. Other such migration tools are being pursued such as the [M2-Redux](https://github.com/trijezdci/M2-Redux) Syntax Reducer and the [MOTTO](https://github.com/trijezdci/MOTTO) Reduced-PIM Modula-2 to C99 Translator projects.
+
+### Backwards Compatibility
 
 Backwards compatibility is the mother of all evil in software. **There will be no backwards compatibility!**
 
