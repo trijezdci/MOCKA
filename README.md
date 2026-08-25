@@ -58,7 +58,7 @@ If and when funding has been obtained, the current code base in this repository 
 
 ### Legacy Modula-2 Code
 
-In order to compile and run example code from the Modula-2 literature on modern 64-bit platforms, or to migrate any remaining legacy Modula-2 code, it is entirely sufficient to use migration tools such as the [Mtc2](https://github.com/cocolab8/cocktail-src/tree/master/mtc2) Modula-2 to C89 Translator. Other such migration tools are being pursued such as the [M2-Redux](https://github.com/trijezdci/M2-Redux) Syntax Reducer and the [MOTTO](https://github.com/trijezdci/MOTTO) Reduced-PIM Modula-2 to C99 Translator projects.
+In order to compile and run example code from the Modula-2 literature on modern 64-bit platforms, or to migrate any remaining legacy Modula-2 code, it is entirely sufficient to use migration tools such as the [Mtc2](https://github.com/cocolab8/cocktail-src/tree/master/mtc2) Modula-2 to C89 Translator. With some adjustments, legacy code written for MOCKA could also be compiled using [GNU Modula-2](https://www.nongnu.org/gm2) with compiler option `--fpim3`. Other migration tools are being pursued such as the [M2-Redux](https://github.com/trijezdci/M2-Redux) Syntax Reducer and the [MOTTO](https://github.com/trijezdci/MOTTO) Reduced-PIM Modula-2 to C99 Translator projects.
 
 ### Backwards Compatibility
 
