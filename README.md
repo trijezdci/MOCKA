@@ -8,7 +8,7 @@ Follows the 3rd edition of Wirth's *Programming in Modula-2*, aka PIM3&nbsp;[[1,
 The MOCKA Modula-2 compiler was developed between 1988 and 1992 by the former German
 National Research Centre for Computer Science (GMD)&nbsp;[[3](./README.md#references)] at
 its former research lab at the University of Karlsruhe&nbsp;[[4](./README.md#references)].
-GMD has since been dissolved and all its research institutes were merged into the
+GMD has since been dissolved. All its research institutes were merged into and all its assets transferred to
 [Fraunhofer Society](https://www.fraunhofer.de/en.html).
 
 GMD followed a dual-licensing approach:
