@@ -62,7 +62,7 @@ In order to compile and run example code from the Modula-2 literature on modern 
 
 ### Backwards Compatibility
 
-Backwards compatibility is the mother of all evil in software. **There will be no backwards compatibility!**
+Backwards compatibility is the mother of all evil in software. **There will be no backwards compatibility!** Use a legacy tool.
 
 
 ---
