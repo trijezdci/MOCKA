@@ -1,0 +1,64 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE SuErrors;
+
+   TYPE
+
+      SourcePosition =
+	 RECORD line : SHORTCARD; col  : SHORTCARD END;
+
+
+   VAR
+
+      OK             : BOOLEAN;
+      UndefSourcePos : SourcePosition;
+
+
+   PROCEDURE OpenErrorFile;
+   (* Open the error message file.
+      (aborts compiler if unsuccessfully) *)
+
+   PROCEDURE CloseErrorFile;
+   (* Close the error message file.  *)
+
+   PROCEDURE ERROR 
+      (VAR msg : ARRAY OF CHAR; pos : SourcePosition);
+   (* Write an error message 'msg' for source position 'pos'
+      onto the error file.
+      Set 'OK' to false. *)
+
+   PROCEDURE ErrorMsgWithId
+      (VAR msg : ARRAY OF CHAR; VAR id: ARRAY OF CHAR; pos : SourcePosition);
+   (* Write an error message 'msg' for source position 'pos'
+      onto the error file.
+      If 'msg' contains a "@", this is subtituted by 'id'.
+      Set 'OK' to false. *)
+
+   PROCEDURE CompilerError
+      (VAR msg : ARRAY OF CHAR);
+   (* Emit 'msg' and abort.  *)
+
+   PROCEDURE Assert(cond: BOOLEAN) ;
+   (* Abort if 'cond' is FALSE *)
+
+   PROCEDURE ErrorReport;
+   (* Write sorted error messages *)
+
+   PROCEDURE InitErrorMsg;
+   (* Initialize. *)
+
+END SuErrors.

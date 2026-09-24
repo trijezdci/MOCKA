@@ -1,0 +1,66 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE Prints;
+
+IMPORT  CgBase;
+
+FROM SYSTEM IMPORT ADDRESS;
+FROM IR IMPORT Register, MemAdr, AdrMode;
+FROM Strings IMPORT String;
+FROM CgBase IMPORT
+   LabelList,
+   (*Aux,*)
+   Tempo,
+   SysProc,
+   Mode,
+   (*Area,*)
+   Relation,
+   Label,
+   ProcIndex,
+   ModuleIndex,
+   StringIndex;
+   (*OpCode,*)
+
+
+PROCEDURE PrintSHORTCARD (x : SHORTCARD);
+PROCEDURE PrintLONGCARD (x : LONGCARD);
+PROCEDURE PrintSHORTINT (x : SHORTINT);
+PROCEDURE PrintLONGINT (x : LONGINT);
+PROCEDURE PrintDataTempo (x : Tempo);
+PROCEDURE PrintAddressTempo (x : Tempo);
+PROCEDURE PrintSysProc(x : SysProc);
+PROCEDURE PrintLabelList(x : LabelList);
+PROCEDURE PrintLabel(x : Label);
+PROCEDURE PrintBOOLEAN(x : BOOLEAN);
+PROCEDURE PrintMode(x : Mode);
+PROCEDURE PrintString (s : String);
+PROCEDURE PrintStringIndex(x : StringIndex);
+PROCEDURE PrintLONGREAL(x : LONGREAL);
+PROCEDURE PrintREAL(x : REAL);
+PROCEDURE PrintBITSET(x : BITSET);
+PROCEDURE PrintProcIndex(x : ProcIndex);
+PROCEDURE PrintRelation(x : Relation);
+PROCEDURE PrintModuleIndex(x : ModuleIndex);
+PROCEDURE PrintCHAR(x : CHAR);
+PROCEDURE PrintADDRESS (a : ADDRESS);
+PROCEDURE PrintRegister (r : Register);
+PROCEDURE PrintRelSymb (r : CgBase.RelSymb);
+PROCEDURE PrintMemAdr (am : MemAdr);
+PROCEDURE PrintAdrMode (am : AdrMode);
+
+
+END Prints.

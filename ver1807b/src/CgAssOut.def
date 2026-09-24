@@ -1,0 +1,88 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE CgAssOut; (* TO DO: s/Ass/Asm *)
+(* Fast text output module used to produce Assembler output *)
+
+
+(* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Isn't this ironic?
+
+   The ISO Modula-2 working group changed the designated identifier for the
+   smalles addressable unit from SAU to LOC, because the German delegation
+   had objected on the grounds that 'sau' was offensive. In German 'sau'
+   means 'sow' and it is used as a derogative. So far so good.
+
+   Yet here we have the sources of the MOCKA compiler, written by some of
+   the members of that German delegation, with a module identifier and a
+   whole bunch of procedures prefixed with 'Ass'.
+
+   Oh the hypocrisy. You couldn't make this up.
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ *)
+
+
+PROCEDURE AssOpen ( VAR name : ARRAY OF CHAR );
+
+
+PROCEDURE AssClose;
+
+
+PROCEDURE flush; (* why lowercase when all other procs aren't? *)
+(* emits buffer *)
+
+
+PROCEDURE AssLn;
+(* generate end of line *)
+(* a line may at most contain 128 characters *)
+
+
+PROCEDURE AssChar ( c : CHAR );
+
+
+PROCEDURE AssString ( VAR s : ARRAY OF CHAR );
+(* generate string *)
+(* GenHString the whole string is output, while GenString *)
+(* Outputs until the first 0c character                   *)
+
+(* NONSENSE!
+
+   Procedure AssHString does no such thing. It is semantically equivalent
+   to procedure AssString. Both procedures copy all characters from the
+   argument string to the output buffer up to the NUL terminator.
+
+   The only difference is that AssString iterates over each character,
+   while AssHString iterates over chunks of four characters, making it
+   a little faster but a lot uglier, less maintainable and to say the
+   least CONFUSING, as evidenced by the fact that even the authors got
+   it wrong when writing the above comment explaining what it does.
+
+   Worse still is the fact that AssHString is overwhelmingly called on
+   arguments of very short strings, typically less than 10 characters,
+   often only one to four characters. Only very seldomly are arguments
+   of ~20 characters passed to it. Hardly any justification for
+   using a badly written and misdocumented "fast" procedure.
+
+   The dictum "PREMATURE OPTIMISATION is the root of all evil" applies here.
+
+   http://wiki.c2.com/?PrematureOptimization *)
+
+PROCEDURE AssHString ( VAR s : ARRAY OF CHAR ); (* TO BE AXED *)
+
+
+PROCEDURE AssInt ( i : INTEGER );
+(* generate Integer *)
+
+END CgAssOut.

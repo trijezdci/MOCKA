@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Make script for MOCKA 1807
+
+export MOCKAM2=
+export MOCKALINK=
+
+echo p Mocka | mocka
+
+# END OF FILE

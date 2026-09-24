@@ -1,0 +1,35 @@
+(*!m2pim+mocka*)
+
+(* ------------------------------------------------------------------------ *
+ * MOCKA Modula-2 Compiler System, Version 1807                             *
+ *                                                                          *
+ * Copyright (C) 1988-2000 by                                               *
+ *  GMD Gesellschaft fuer Mathematik und Datenverarbeitung,                 *
+ *  Ehemalige GMD Forschungsstelle an der Uni Karlsruhe;                    *
+ *  [EN] German National Research Center for Computer Science,              *
+ *  Former GMD Research Lab at the University of Karlsruhe.                 *
+ *                                                                          *
+ * Copyright (C) 2001-2018 by                                               *
+ *  Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung;       *
+ *  [EN] Fraunhofer Society for the Advancement of Applied Research.        *
+ * ------------------------------------------------------------------------ *)
+
+DEFINITION MODULE SuAlloc;
+
+   FROM SYSTEM IMPORT
+      ADDRESS;
+
+   PROCEDURE ALLOCATE
+      (VAR a : ADDRESS;
+	   n : LONGCARD);
+   (* Substitution procedure for 'NEW'.
+      Allocate 'n' bytes and return in 'a' a pointer
+      to that storage region.  *)
+
+   PROCEDURE InitAlloc;
+   (* Initialize.
+      May be called more than once in a single run,
+      in this case the storage used by preceding allocations
+      is reused.  *)
+
+END SuAlloc.
